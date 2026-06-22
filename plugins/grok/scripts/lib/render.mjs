@@ -108,8 +108,20 @@ export function renderSetupReport(report) {
 
   if (report.grok.available && !report.auth.authenticated) {
     lines.push("Authenticate Grok:");
-    lines.push("- Run `!grok login` in Claude Code");
-    lines.push("- Or run `grok login` in your terminal");
+    if (process.platform === "win32") {
+      lines.push(`- Run \`!${report.grok.installDir}\\\\grok.exe login\` in Claude Code`);
+      lines.push("- Or run `grok login` in a new PowerShell window");
+    } else {
+      lines.push(`- Run \`!${report.grok.installDir}/grok login\` in Claude Code`);
+      lines.push("- Or run `grok login` in your terminal");
+    }
+    lines.push("- If `!grok login` says command not found, Claude Code was started before PATH was updated. Restart Claude Code or use the full path above.");
+    lines.push("");
+  }
+
+  if (report.grok.available && report.grok.command !== "grok") {
+    lines.push(`Grok binary: ${report.grok.command}`);
+    lines.push("Claude Code is using the default install path because `grok` is not on PATH in this session.");
     lines.push("");
   }
 

@@ -40,4 +40,5 @@ If Grok is already installed:
 Output rules:
 - Present the final setup output to the user.
 - If installation was skipped, present the original setup output.
-- If Grok is installed but not authenticated, preserve the guidance to run `!grok login`.
+- If Grok is installed but not authenticated, tell the user to run `/grok:login`.
+- If `!grok login` fails with command not found, explain that Claude Code may have started before PATH was updated. Recommend `/grok:login` (full path) or restarting Claude Code after adding `%USERPROFILE%\.grok\bin` to PATH.

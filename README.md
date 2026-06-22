@@ -184,6 +184,18 @@ The companion script also tracks jobs per workspace so background runs, status, 
 
 ## FAQ
 
+### `!grok login` says command not found in Claude Code
+
+Yes, this is common on Windows. Grok installs to `%USERPROFILE%\.grok\bin`, but Claude Code only sees PATH from when it was launched.
+
+Options:
+
+1. Run `/grok:login` inside Claude Code (uses the full path)
+2. Run `grok login` in a new PowerShell window, then restart Claude Code
+3. Add `%USERPROFILE%\.grok\bin` to your user PATH and restart Claude Code
+
+The plugin runtime also resolves `~/.grok/bin/grok.exe` directly, so `/grok:delegate` and `/grok:review` can work even when `!grok` does not.
+
 ### Do I need a separate Grok account?
 
 No. The plugin uses your local Grok CLI authentication. Run `/grok:setup` or `grok login` if you are not signed in yet.

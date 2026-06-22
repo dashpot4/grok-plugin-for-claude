@@ -5,16 +5,49 @@ import path from "node:path";
 import { binaryAvailable, runCommand } from "./process.mjs";
 
 const AUTH_FILE = path.join(os.homedir(), ".grok", "auth.json");
+const DEFAULT_GROK_BIN_DIR = path.join(os.homedir(), ".grok", "bin");
 export const DEFAULT_CONTINUE_PROMPT = "Continue from where you left off.";
 export const DEFAULT_MAX_TURNS = 50;
 const VALID_EFFORTS = new Set(["low", "medium", "high", "xhigh", "max"]);
 
+function defaultGrokBinaryCandidates() {
+  const binaryName = process.platform === "win32" ? "grok.exe" : "grok";
+  return [
+    process.env.GROK_BIN,
+    process.env.GROK_BIN_DIR ? path.join(process.env.GROK_BIN_DIR, binaryName) : null,
+    path.join(DEFAULT_GROK_BIN_DIR, binaryName)
+  ].filter(Boolean);
+}
+
+export function resolveGrokCommand() {
+  for (const candidate of defaultGrokBinaryCandidates()) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return "grok";
+}
+
+export function getGrokInstallDir() {
+  const command = resolveGrokCommand();
+  if (command !== "grok") {
+    return path.dirname(command);
+  }
+  return DEFAULT_GROK_BIN_DIR;
+}
+
 export function getGrokAvailability() {
-  return binaryAvailable("grok", ["--version"]);
+  const command = resolveGrokCommand();
+  const availability = binaryAvailable(command, ["--version"]);
+  return {
+    ...availability,
+    command,
+    installDir: getGrokInstallDir()
+  };
 }
 
 export function getGrokAuthStatus() {
-  const result = runCommand("grok", ["models"]);
+  const result = runCommand(resolveGrokCommand(), ["models"]);
   const output = `${result.stdout}\n${result.stderr}`.trim();
   if (result.status === 0 && /logged in/i.test(output)) {
     return { authenticated: true, detail: output.split("\n")[0] };
@@ -108,7 +141,7 @@ export function runGrokTurn(cwd, options = {}) {
   const args = buildGrokArgs(cwd, options);
   options.onProgress?.({ message: "Starting Grok...", phase: "starting" });
 
-  const result = runCommand("grok", args, {
+  const result = runCommand(resolveGrokCommand(), args, {
     cwd,
     maxBuffer: 64 * 1024 * 1024
   });
