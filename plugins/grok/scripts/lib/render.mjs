@@ -102,7 +102,7 @@ export function renderModelReport(report) {
       lines.push(`${marker} ${choice.label} (\`${choice.id}\`)`);
     }
     lines.push("");
-    lines.push("Run `/grok:model` to pick a different model.");
+    lines.push("Change model: `/grok:model grok-build` or `/grok:model composer`");
     lines.push("");
   }
 

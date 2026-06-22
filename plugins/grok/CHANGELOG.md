@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4 — 2026-06-23
+
+- Make `/grok:model` instant like `/grok:status` (`disable-model-invocation` + direct script output)
+- Remove slow AskUserQuestion orchestration; switch models with `/grok:model grok-build` or aliases `composer` / `build`
+- Use built-in model catalog by default instead of spawning `grok models` on every run
+
 ## 1.0.3 — 2026-06-23
 
 - Add `/grok:model` to view and save the default Grok model per workspace

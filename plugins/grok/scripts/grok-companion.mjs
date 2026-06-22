@@ -631,15 +631,19 @@ function handleTaskResumeCandidate(argv) {
 function handleModel(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["set", "cwd"],
-    booleanOptions: ["json"]
+    booleanOptions: ["json", "refresh"]
   });
 
   const cwd = resolveCommandCwd(options);
   const workspaceRoot = resolveCommandWorkspace(options);
-  ensureGrokAvailable();
+  const refresh = Boolean(options.refresh);
 
-  const availability = listGrokModels();
-  const requestedModel = options.set ?? positionals[0] ?? null;
+  if (refresh) {
+    ensureGrokAvailable();
+  }
+
+  const availability = listGrokModels({ refresh });
+  const requestedModel = options.set ?? (positionals.join(" ").trim() || null);
 
   if (requestedModel) {
     const selectedModel = validateModelSelection(requestedModel, availability.models);

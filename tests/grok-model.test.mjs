@@ -8,6 +8,8 @@ import {
   PLUGIN_DEFAULT_MODEL,
   buildModelChoices,
   buildModelSnapshot,
+  getKnownModelsCatalog,
+  normalizeModelId,
   parseGrokModelsOutput,
   resolvePluginModel
 } from "../plugins/grok/scripts/lib/model.mjs";
@@ -35,6 +37,16 @@ test("parseGrokModelsOutput extracts CLI default and model ids", () => {
     ["grok-build", "grok-composer-2.5-fast"]
   );
   assert.equal(parsed.models[1].isCliDefault, true);
+});
+
+test("normalizeModelId resolves short aliases", () => {
+  assert.equal(normalizeModelId("composer"), "grok-composer-2.5-fast");
+  assert.equal(normalizeModelId("build"), "grok-build");
+});
+
+test("getKnownModelsCatalog avoids grok models subprocess", () => {
+  const catalog = getKnownModelsCatalog();
+  assert.equal(catalog.models.length, 2);
 });
 
 test("resolvePluginModel prefers explicit model then plugin default", () => {
@@ -86,7 +98,8 @@ test("grok-companion model exits successfully", () => {
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.action, "show");
-  assert.equal(payload.selectedModel, PLUGIN_DEFAULT_MODEL);
+  assert.ok(typeof payload.selectedModel === "string" && payload.selectedModel.length > 0);
+  assert.equal(payload.pluginDefault, PLUGIN_DEFAULT_MODEL);
   assert.ok(Array.isArray(payload.choices));
-  assert.ok(payload.choices.length >= 1);
+  assert.equal(payload.choices.length, 2);
 });

@@ -175,9 +175,10 @@ Pick the default Grok model for this workspace. The plugin default is `grok-comp
 ```text
 /grok:model
 /grok:model grok-build
+/grok:model composer
 ```
 
-`/grok:delegate` and `/grok:review` use the saved model unless you pass `--model`.
+Runs instantly (no Claude orchestration). `/grok:delegate` and `/grok:review` use the saved model unless you pass `--model`.
 
 ### `/grok:delegate`
 

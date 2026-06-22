@@ -10,11 +10,48 @@ const MODEL_LABELS = {
   "grok-build": "Grok Build"
 };
 
+export const KNOWN_MODELS = [
+  { id: "grok-composer-2.5-fast", label: "Composer 2.5 Fast" },
+  { id: "grok-build", label: "Grok Build" }
+];
+
+const MODEL_ALIASES = {
+  composer: "grok-composer-2.5-fast",
+  "composer-2.5-fast": "grok-composer-2.5-fast",
+  "grok-composer": "grok-composer-2.5-fast",
+  build: "grok-build",
+  "grok-build": "grok-build"
+};
+
 export function formatModelLabel(modelId) {
   return MODEL_LABELS[modelId] ?? modelId;
 }
 
-export function listGrokModels() {
+export function normalizeModelId(modelId) {
+  const normalized = String(modelId ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return "";
+  }
+  return MODEL_ALIASES[normalized] ?? String(modelId).trim();
+}
+
+export function getKnownModelsCatalog(cliDefault = null) {
+  return {
+    cliDefault,
+    models: KNOWN_MODELS.map((model) => ({
+      ...model,
+      isCliDefault: model.id === (cliDefault ?? PLUGIN_DEFAULT_MODEL)
+    }))
+  };
+}
+
+export function listGrokModels(options = {}) {
+  if (!options.refresh) {
+    return {
+      ...getKnownModelsCatalog(),
+      raw: ""
+    };
+  }
   const result = runCommand(resolveGrokCommand(), ["models"]);
   const output = `${result.stdout}\n${result.stderr}`.trim();
   if (result.error) {
@@ -110,14 +147,14 @@ export function buildModelSnapshot(workspaceRoot, options = {}) {
 }
 
 export function validateModelSelection(modelId, availableModels) {
-  const normalized = String(modelId ?? "").trim();
+  const normalized = normalizeModelId(modelId);
   if (!normalized) {
     throw new Error("Provide a model id.");
   }
 
   const availableIds = availableModels.map((model) => model.id);
   if (availableIds.length > 0 && !availableIds.includes(normalized)) {
-    throw new Error(`Unknown model "${normalized}". Available: ${availableIds.join(", ")}`);
+    throw new Error(`Unknown model "${modelId}". Available: ${availableIds.join(", ")}`);
   }
 
   return normalized;
