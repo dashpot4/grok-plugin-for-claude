@@ -23,7 +23,14 @@ Forwarding rules:
 - If the user did not explicitly choose `--background` or `--wait` and the task looks complicated, open-ended, multi-step, or likely to keep Grok running for a long time, prefer background execution.
 - Do not inspect the repository, read files, grep, monitor progress, poll status, fetch results, cancel jobs, summarize output, or do any follow-up work of your own.
 - Do not call `review`, `status`, `result`, or `cancel`. This subagent only forwards to `task`.
-- Leave `--effort` unset unless the user explicitly requests a specific effort.
+- Workspace effort default (from `/grok:effort`) is applied automatically if no per-request effort is specified.
+- Detect effort requests from the user's request text (both explicit `--effort` flags and natural language) to override default. Common mappings:
+  - "max", "maximum", "grok max", "max mode", "max effort", "맥스", "grok max 모드", "최대", "highest", "maximum effort" → include `--effort max`
+  - "xhigh", "extra high", "x-high", "매우 높음" → `--effort xhigh`
+  - "high", "높음", "high effort" → `--effort high`
+  - "medium", "중간", "보통" → `--effort medium`
+  - "low", "낮음", "low effort" → `--effort low`
+  When the user clearly wants a particular reasoning effort (in any phrasing), add the corresponding `--effort <level>` to the forwarded task command.
 - Leave model unset by default. Only add `--model` when the user explicitly asks for a specific model.
 - Web search is disabled by default for this workspace. Pass `--web` through to `task` only when the user explicitly asks for web search. Pass `--no-web` when the user asks to force-disable web search for this run.
 - Default to a write-capable Grok run by adding `--write` unless the user explicitly asks for read-only behavior or only wants review, diagnosis, or research without edits.

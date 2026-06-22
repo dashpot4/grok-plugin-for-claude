@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7 — 2026-06-23
+
+- Add `/grok:effort` command to view or change workspace default reasoning effort (`low`/`medium`/`high`/`xhigh`/`max` or `none`)
+- Workspace default effort is automatically applied to `/grok:delegate` and `/grok:review` (per-run `--effort` or natural language overrides it)
+- Natural language effort phrases (e.g. "grok max 모드로", "use maximum effort", "최대 effort") are now detected in delegate/review requests and converted to the proper `--effort` flag
+- `/grok:setup` now shows the reasoning effort default
+- Added `effort.mjs` and full wiring for defaults and per-run (including review path)
+
 ## 1.0.6 — 2026-06-23
 
 - Add `/grok:delegate --no-subagents` to call `grok-companion task` directly and skip the delegate subagent

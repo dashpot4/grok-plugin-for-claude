@@ -1,6 +1,6 @@
 # Grok plugin for Claude Code
 
-**Current version: 1.0.6**
+**Current version: 1.0.7**
 
 Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code to delegate tasks or run code reviews through a Grok subagent.
 
@@ -16,6 +16,7 @@ Full release history: [plugins/grok/CHANGELOG.md](plugins/grok/CHANGELOG.md)
 | `/grok:login` | Sign in to Grok using the full binary path (no PATH needed) |
 | `/grok:model` | View or change the default Grok model for this workspace |
 | `/grok:web` | View or change the default web-search setting for this workspace |
+| `/grok:effort` | View or change the default reasoning effort for this workspace |
 | `/grok:delegate` | Hand investigation, fixes, or follow-up work to Grok |
 | `/grok:review` | Read-only Grok code review of your working tree or branch |
 | `/grok:status` | Show running and recent Grok jobs for this repo |
@@ -64,6 +65,7 @@ Update to the latest release:
 
 | Version | Highlights |
 |---------|------------|
+| **1.0.7** | `/grok:effort` for workspace reasoning effort default + natural language effort detection (e.g. "grok max 모드") |
 | **1.0.6** | `--no-subagents` direct delegate; `/grok:web`; web search off by default (`--web` to enable); setup shows workspace settings; CI |
 | **1.0.5** | `--no-web` / `--disable-web-search` per run (helps with large prompts + web-search `400 Bad Request`) |
 | **1.0.4** | `/grok:model` is instant (like `/grok:status`); use `/grok:model grok-build` or `composer` |
@@ -215,6 +217,8 @@ Hands a task to Grok through the `grok:grok-delegate` subagent.
 /grok:delegate fix the failing test with the smallest safe patch
 /grok:delegate --resume apply the top fix from the last run
 /grok:delegate --model grok-composer-2.5-fast --effort high investigate the flaky test
+/grok:delegate grok max 모드로 flaky test 분석해줘
+/grok:delegate use maximum effort to fix the regression
 /grok:delegate --background investigate the regression
 /grok:delegate --no-subagents investigate the failing test
 /grok:delegate --web search for recent breaking changes in the dependency
@@ -235,12 +239,15 @@ Ask Grok to redesign the database connection to be more resilient.
 | `--resume` | Continue the latest Grok session for this repo |
 | `--fresh` | Start a new Grok session |
 | `--model <id>` | Pick a model (e.g. `grok-composer-2.5-fast`) |
-| `--effort <level>` | `low`, `medium`, `high`, `xhigh`, or `max` |
+| `--effort <level>` | `low`, `medium`, `high`, `xhigh`, or `max` (or natural language like "grok max 모드"). Per-run override. |
+| workspace effort default | `/grok:effort high` (or none to clear). Applied automatically to `/grok:delegate` and `/grok:review`. |
 | `--no-web` / `--disable-web-search` | Force-disable web search for this run |
 | `--web` / `--enable-web-search` | Enable web search for this run (overrides workspace default) |
 | `--no-subagents` | Call `grok-companion task` directly; skip the delegate subagent |
 
 Delegate runs are **write-capable by default** (Grok can edit files). Ask explicitly for read-only behavior if you only want investigation or review.
+
+**Natural language effort**: You can also say things like "grok max 모드로", "use maximum effort", or "highest reasoning" — the delegate will detect it and pass `--effort max` (or the appropriate level) to Grok. Explicit `--effort` takes precedence.
 
 ### `/grok:review`
 
@@ -271,6 +278,17 @@ Read-only code review. Does not modify files.
 ```
 
 Runs instantly. Default is **off** (web search disabled). `/grok:delegate` and `/grok:review` follow this unless you pass `--web` or `--no-web`.
+
+### `/grok:effort`
+
+```text
+/grok:effort
+/grok:effort high
+/grok:effort max
+/grok:effort none
+```
+
+Runs instantly. Sets the default reasoning effort (`low` / `medium` / `high` / `xhigh` / `max`) for `/grok:delegate` and `/grok:review` in this workspace. Use `none` or `clear` to remove the default (let Grok decide per call). Per-run override with `--effort` flag or natural language like "grok max 모드로".
 
 ### `/grok:status`, `/grok:result`, `/grok:cancel`
 
@@ -403,7 +421,7 @@ Update the plugin:
 /reload-plugins
 ```
 
-Requires **v1.0.6** for `/grok:web`, `--no-subagents`, default no-web, and workspace settings in `/grok:setup`. `/grok:setup` can also run login on older cached installs.
+Requires **v1.0.7** for `/grok:effort` (workspace reasoning effort default + natural language support). Requires **v1.0.6** for `/grok:web`, `--no-subagents`, etc. `/grok:setup` can also run login on older cached installs.
 
 ### `/grok:setup` says needs authentication
 

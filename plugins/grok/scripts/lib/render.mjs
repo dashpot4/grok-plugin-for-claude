@@ -104,6 +104,30 @@ export function renderWebReport(report) {
   return `${lines.join("\n")}\n`;
 }
 
+export function renderEffortReport(report) {
+  const lines = [
+    "# Grok Reasoning Effort",
+    "",
+    `Default: ${report.label}`,
+    ""
+  ];
+
+  if (report.changed) {
+    lines.push(
+      "Saved for this workspace. Future `/grok:delegate` and `/grok:review` runs use this default unless you pass an explicit `--effort`."
+    );
+    lines.push("");
+    lines.push("Change with: `/grok:effort high` or `/grok:effort none` (to clear)");
+  } else if (report.action === "show") {
+    lines.push("Per-run overrides:");
+    lines.push("- Set for one run: `--effort high` (or max, xhigh, medium, low)");
+    lines.push("");
+    lines.push("Change workspace default: `/grok:effort high` (or none to clear)");
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
 export function renderModelReport(report) {
   const lines = [
     "# Grok Model",
@@ -195,8 +219,10 @@ export function renderSetupReport(report) {
       `- Default model: ${report.workspace.model.selectedLabel} (\`${report.workspace.model.selectedModel}\`)`
     );
     lines.push(`- Web search: ${report.workspace.web.label}`);
+    lines.push(`- Reasoning effort: ${report.workspace.effort?.label ?? "not set"}`);
     lines.push("- Change model: `/grok:model grok-build` or `/grok:model composer`");
     lines.push("- Change web default: `/grok:web on` or `/grok:web off`");
+    lines.push("- Change effort default: `/grok:effort high` (or none to clear)");
     lines.push("- Skip delegate subagent: `/grok:delegate --no-subagents ...`");
     lines.push("");
   }

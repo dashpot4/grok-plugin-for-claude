@@ -1,11 +1,13 @@
 ---
 description: Run a Grok code review against local git state
-argument-hint: '[--wait|--background] [--no-web|--web] [--base <ref>] [--scope auto|working-tree|branch]'
+argument-hint: '[--wait|--background] [--no-web|--web] [--effort <low|medium|high|xhigh|max>] [--base <ref>] [--scope auto|working-tree|branch]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
 
 Run a Grok review through the shared reviewer.
+
+Workspace default effort (set via `/grok:effort`) and model are used unless overridden with `--effort` or `--model`.
 
 Raw slash-command arguments:
 `$ARGUMENTS`
@@ -35,6 +37,7 @@ Argument handling:
 - Preserve the user's arguments exactly.
 - Do not strip `--wait` or `--background` yourself.
 - Do not add extra review instructions or rewrite the user's intent.
+- However, scan for natural language effort requests (e.g. "grok max 모드", "use high effort") and ensure `--effort <level>` is included in the arguments passed to the companion (so workspace default can be overridden). Explicit flags take precedence.
 
 Foreground flow:
 - Run:

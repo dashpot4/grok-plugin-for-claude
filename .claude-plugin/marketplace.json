@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Grok Build CLI plugins for Claude Code — delegate tasks and run code reviews through Grok.",
-    "version": "1.0.6"
+    "version": "1.0.7"
   },
   "plugins": [
     {
       "name": "grok",
       "description": "Use Grok Build CLI from Claude Code to review code or delegate tasks.",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "author": {
         "name": "Lee HanSol"
       },

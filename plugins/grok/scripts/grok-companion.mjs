@@ -32,6 +32,7 @@ import { interpolateTemplate, loadPromptTemplate } from "./lib/prompts.mjs";
 import {
   renderCancelReport,
   renderJobStatusReport,
+  renderEffortReport,
   renderModelReport,
   renderQueuedTaskLaunch,
   renderReviewResult,
@@ -54,6 +55,12 @@ import {
   normalizeWebSetting,
   resolveDisableWebSearch
 } from "./lib/web.mjs";
+import {
+  PLUGIN_EFFORT_KEY,
+  buildEffortSnapshot,
+  normalizeEffortSetting,
+  resolvePluginEffort
+} from "./lib/effort.mjs";
 import { generateJobId, listJobs, setConfig, upsertJob, writeJobFile } from "./lib/state.mjs";
 import {
   appendLogLine,
@@ -81,6 +88,7 @@ function printUsage() {
       "  node scripts/grok-companion.mjs cancel [job-id] [--json]",
       "  node scripts/grok-companion.mjs model [--set <model>] [--json]",
       "  node scripts/grok-companion.mjs web [--set on|off] [--json]",
+      "  node scripts/grok-companion.mjs effort [--set <low|medium|high|xhigh|max|none>] [--json]",
       "  node scripts/grok-companion.mjs task-resume-candidate [--json]"
     ].join("\n")
   );
@@ -171,13 +179,14 @@ async function buildSetupReport(workspaceRoot, actionsTaken = []) {
   const sessionRuntime = getSessionRuntimeStatus();
   const model = buildModelSnapshot(workspaceRoot);
   const web = buildWebSnapshot(workspaceRoot);
+  const effort = buildEffortSnapshot(workspaceRoot);
   return {
     ready: grok.available && auth.authenticated,
     node,
     grok,
     auth,
     sessionRuntime,
-    workspace: { model, web },
+    workspace: { model, web, effort },
     actionsTaken
   };
 }
@@ -228,6 +237,7 @@ async function executeReviewRun(request) {
   const result = runGrokTurn(context.repoRoot, {
     prompt,
     model: request.model,
+    effort: request.effort,
     write: false,
     disableWebSearch: Boolean(request.disableWebSearch),
     onProgress: request.onProgress
@@ -450,7 +460,7 @@ function enqueueBackgroundTask(cwd, job, request) {
 
 async function handleReview(argv) {
   const { options, positionals } = parseCommandInput(argv, {
-    valueOptions: ["base", "scope", "model", "cwd"],
+    valueOptions: ["base", "scope", "model", "effort", "cwd"],
     booleanOptions: ["json", "background", "wait", "disable-web-search", "no-web", "web", "enable-web-search"],
     aliasMap: { m: "model" }
   });
@@ -459,6 +469,7 @@ async function handleReview(argv) {
   const workspaceRoot = resolveCommandWorkspace(options);
   const explicitModel = options.model ? String(options.model).trim() : null;
   const model = resolvePluginModel(workspaceRoot, explicitModel);
+  const effort = resolvePluginEffort(workspaceRoot, options.effort);
   const disableWebSearch = resolveDisableWebSearchOption(workspaceRoot, options);
   const focusText = positionals.join(" ").trim();
   const target = resolveReviewTarget(cwd, {
@@ -484,6 +495,7 @@ async function handleReview(argv) {
         base: options.base,
         scope: options.scope,
         model,
+        effort,
         disableWebSearch,
         focusText,
         onProgress: progress
@@ -514,7 +526,7 @@ async function handleTask(argv) {
   const workspaceRoot = resolveCommandWorkspace(options);
   const explicitModel = options.model ? String(options.model).trim() : null;
   const model = resolvePluginModel(workspaceRoot, explicitModel);
-  const effort = normalizeEffort(options.effort);
+  const effort = resolvePluginEffort(workspaceRoot, options.effort);
   const prompt = readTaskPrompt(cwd, options, positionals);
   const resumeLast = Boolean(options["resume-last"] || options.resume);
   const fresh = Boolean(options.fresh);
@@ -694,6 +706,48 @@ function handleWeb(argv) {
   outputCommandResult(payload, renderWebReport(payload), options.json);
 }
 
+function handleEffort(argv) {
+  const { options, positionals } = parseCommandInput(argv, {
+    valueOptions: ["set", "cwd"],
+    booleanOptions: ["json"]
+  });
+
+  const workspaceRoot = resolveCommandWorkspace(options);
+  const requested = options.set ?? (positionals.join(" ").trim() || null);
+
+  if (requested) {
+    if (requested.startsWith("-")) {
+      // unknown flag, show current
+      const snapshot = buildEffortSnapshot(workspaceRoot);
+      const payload = {
+        action: "show",
+        changed: false,
+        ...snapshot
+      };
+      outputCommandResult(payload, renderEffortReport(payload), options.json);
+      return;
+    }
+    const effortValue = normalizeEffortSetting(requested);
+    setConfig(workspaceRoot, PLUGIN_EFFORT_KEY, effortValue);
+    const snapshot = buildEffortSnapshot(workspaceRoot);
+    const payload = {
+      action: "set",
+      changed: true,
+      ...snapshot
+    };
+    outputCommandResult(payload, renderEffortReport(payload), options.json);
+    return;
+  }
+
+  const snapshot = buildEffortSnapshot(workspaceRoot);
+  const payload = {
+    action: "show",
+    changed: false,
+    ...snapshot
+  };
+  outputCommandResult(payload, renderEffortReport(payload), options.json);
+}
+
 function handleModel(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["set", "cwd"],
@@ -814,6 +868,9 @@ async function main() {
       break;
     case "web":
       handleWeb(argv);
+      break;
+    case "effort":
+      handleEffort(argv);
       break;
     case "cancel":
       handleCancel(argv);
