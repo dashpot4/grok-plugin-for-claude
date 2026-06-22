@@ -32,6 +32,7 @@ import { interpolateTemplate, loadPromptTemplate } from "./lib/prompts.mjs";
 import {
   renderCancelReport,
   renderJobStatusReport,
+  renderModelReport,
   renderQueuedTaskLaunch,
   renderReviewResult,
   renderSetupReport,
@@ -39,7 +40,14 @@ import {
   renderStoredJobResult,
   renderTaskResult
 } from "./lib/render.mjs";
-import { generateJobId, listJobs, upsertJob, writeJobFile } from "./lib/state.mjs";
+import {
+  buildModelSnapshot,
+  PLUGIN_MODEL_CONFIG_KEY,
+  resolvePluginModel,
+  validateModelSelection,
+  listGrokModels
+} from "./lib/model.mjs";
+import { generateJobId, listJobs, setConfig, upsertJob, writeJobFile } from "./lib/state.mjs";
 import {
   appendLogLine,
   createJobLogFile,
@@ -64,6 +72,7 @@ function printUsage() {
       "  node scripts/grok-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/grok-companion.mjs result [job-id] [--json]",
       "  node scripts/grok-companion.mjs cancel [job-id] [--json]",
+      "  node scripts/grok-companion.mjs model [--set <model>] [--json]",
       "  node scripts/grok-companion.mjs task-resume-candidate [--json]"
     ].join("\n")
   );
@@ -429,6 +438,8 @@ async function handleReview(argv) {
 
   const cwd = resolveCommandCwd(options);
   const workspaceRoot = resolveCommandWorkspace(options);
+  const explicitModel = options.model ? String(options.model).trim() : null;
+  const model = resolvePluginModel(workspaceRoot, explicitModel);
   const focusText = positionals.join(" ").trim();
   const target = resolveReviewTarget(cwd, {
     base: options.base,
@@ -452,7 +463,7 @@ async function handleReview(argv) {
         cwd,
         base: options.base,
         scope: options.scope,
-        model: options.model,
+        model,
         focusText,
         onProgress: progress
       }),
@@ -469,7 +480,8 @@ async function handleTask(argv) {
 
   const cwd = resolveCommandCwd(options);
   const workspaceRoot = resolveCommandWorkspace(options);
-  const model = options.model ? String(options.model).trim() : null;
+  const explicitModel = options.model ? String(options.model).trim() : null;
+  const model = resolvePluginModel(workspaceRoot, explicitModel);
   const effort = normalizeEffort(options.effort);
   const prompt = readTaskPrompt(cwd, options, positionals);
   const resumeLast = Boolean(options["resume-last"] || options.resume);
@@ -616,6 +628,41 @@ function handleTaskResumeCandidate(argv) {
   outputCommandResult(payload, rendered, options.json);
 }
 
+function handleModel(argv) {
+  const { options, positionals } = parseCommandInput(argv, {
+    valueOptions: ["set", "cwd"],
+    booleanOptions: ["json"]
+  });
+
+  const cwd = resolveCommandCwd(options);
+  const workspaceRoot = resolveCommandWorkspace(options);
+  ensureGrokAvailable();
+
+  const availability = listGrokModels();
+  const requestedModel = options.set ?? positionals[0] ?? null;
+
+  if (requestedModel) {
+    const selectedModel = validateModelSelection(requestedModel, availability.models);
+    setConfig(workspaceRoot, PLUGIN_MODEL_CONFIG_KEY, selectedModel);
+    const snapshot = buildModelSnapshot(workspaceRoot, { models: availability });
+    const payload = {
+      action: "set",
+      changed: true,
+      ...snapshot
+    };
+    outputCommandResult(payload, renderModelReport(payload), options.json);
+    return;
+  }
+
+  const snapshot = buildModelSnapshot(workspaceRoot, { models: availability });
+  const payload = {
+    action: "show",
+    changed: false,
+    ...snapshot
+  };
+  outputCommandResult(payload, renderModelReport(payload), options.json);
+}
+
 function handleCancel(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["cwd"],
@@ -691,6 +738,9 @@ async function main() {
       break;
     case "task-resume-candidate":
       handleTaskResumeCandidate(argv);
+      break;
+    case "model":
+      handleModel(argv);
       break;
     case "cancel":
       handleCancel(argv);

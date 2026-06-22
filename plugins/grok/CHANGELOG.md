@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3 — 2026-06-23
+
+- Add `/grok:model` to view and save the default Grok model per workspace
+- Default plugin model is `grok-composer-2.5-fast` when no workspace override is saved
+- `/grok:delegate` and `/grok:review` now use the saved default unless `--model` is passed
+
 ## 1.0.2 — 2026-06-23
 
 - Fix Windows shell quoting when delegating prompts with parentheses or non-ASCII text

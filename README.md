@@ -10,6 +10,7 @@ Inspired by the [Codex plugin for Claude Code](https://github.com/openai/codex-p
 |---------|--------------|
 | `/grok:setup` | Check Grok install/auth, offer to install or log in |
 | `/grok:login` | Sign in to Grok using the full binary path (no PATH needed) |
+| `/grok:model` | View or change the default Grok model for this workspace |
 | `/grok:delegate` | Hand investigation, fixes, or follow-up work to Grok |
 | `/grok:review` | Read-only Grok code review of your working tree or branch |
 | `/grok:status` | Show running and recent Grok jobs for this repo |
@@ -166,6 +167,17 @@ The plugin runtime itself resolves `~/.grok/bin/grok.exe` directly, so `/grok:de
 ---
 
 ## Usage
+
+### `/grok:model`
+
+Pick the default Grok model for this workspace. The plugin default is `grok-composer-2.5-fast`.
+
+```text
+/grok:model
+/grok:model grok-build
+```
+
+`/grok:delegate` and `/grok:review` use the saved model unless you pass `--model`.
 
 ### `/grok:delegate`
 

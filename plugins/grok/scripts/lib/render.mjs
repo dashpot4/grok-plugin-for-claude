@@ -1,3 +1,5 @@
+import { formatModelLabel } from "./model.mjs";
+
 function formatJobLine(job) {
   const parts = [job.id, `${job.status || "unknown"}`];
   if (job.kindLabel) {
@@ -74,6 +76,42 @@ function pushJobDetails(lines, job, options = {}) {
       lines.push(`    ${line}`);
     }
   }
+}
+
+export function renderModelReport(report) {
+  const lines = [
+    "# Grok Model",
+    "",
+    `Selected: ${report.selectedLabel} (\`${report.selectedModel}\`)`,
+    `Plugin default: ${formatModelLabel(report.pluginDefault)}`,
+    ""
+  ];
+
+  if (report.cliDefault) {
+    lines.push(`Grok CLI default: \`${report.cliDefault}\``);
+    lines.push("");
+  }
+
+  if (report.changed) {
+    lines.push("Saved for this workspace. Future `/grok:delegate` and `/grok:review` runs will use this model unless you pass `--model`.");
+    lines.push("");
+  } else if (report.action === "show") {
+    lines.push("Available models:");
+    for (const choice of report.choices ?? []) {
+      const marker = choice.isSelected ? "*" : "-";
+      lines.push(`${marker} ${choice.label} (\`${choice.id}\`)`);
+    }
+    lines.push("");
+    lines.push("Run `/grok:model` to pick a different model.");
+    lines.push("");
+  }
+
+  if (report.isValidSelection === false) {
+    lines.push(`Warning: selected model is not currently available from \`grok models\`.`);
+    lines.push("");
+  }
+
+  return `${lines.join("\n")}\n`;
 }
 
 export function renderSetupReport(report) {
