@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.6 — 2026-06-23
+
+- Add `/grok:delegate --no-subagents` to call `grok-companion task` directly and skip the delegate subagent
+- Add `/grok:web` to view or save workspace web-search default (off by default)
+- Web search is now disabled by default; pass `--web` per run to enable it
+- `/grok:setup` shows workspace default model and web-search setting
+- Add GitHub Actions CI (`npm test`)
+
 ## 1.0.5 — 2026-06-23
 
 - Add `--disable-web-search` and `--no-web` to `/grok:delegate`, `/grok:review`, and `grok-companion task|review`

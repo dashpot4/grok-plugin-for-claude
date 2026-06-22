@@ -1,6 +1,6 @@
 # Grok plugin for Claude Code
 
-**Current version: 1.0.5**
+**Current version: 1.0.6**
 
 Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code to delegate tasks or run code reviews through a Grok subagent.
 
@@ -15,6 +15,7 @@ Full release history: [plugins/grok/CHANGELOG.md](plugins/grok/CHANGELOG.md)
 | `/grok:setup` | Check Grok install/auth, offer to install or log in |
 | `/grok:login` | Sign in to Grok using the full binary path (no PATH needed) |
 | `/grok:model` | View or change the default Grok model for this workspace |
+| `/grok:web` | View or change the default web-search setting for this workspace |
 | `/grok:delegate` | Hand investigation, fixes, or follow-up work to Grok |
 | `/grok:review` | Read-only Grok code review of your working tree or branch |
 | `/grok:status` | Show running and recent Grok jobs for this repo |
@@ -63,6 +64,7 @@ Update to the latest release:
 
 | Version | Highlights |
 |---------|------------|
+| **1.0.6** | `--no-subagents` direct delegate; `/grok:web`; web search off by default (`--web` to enable); setup shows workspace settings; CI |
 | **1.0.5** | `--no-web` / `--disable-web-search` per run (helps with large prompts + web-search `400 Bad Request`) |
 | **1.0.4** | `/grok:model` is instant (like `/grok:status`); use `/grok:model grok-build` or `composer` |
 | **1.0.3** | `/grok:model` saves workspace default model (`grok-composer-2.5-fast` by default) |
@@ -106,7 +108,7 @@ Alternatively:
 /grok:setup
 ```
 
-You should see `Status: ready`.
+You should see `Status: ready` plus workspace settings (default model, web search default).
 
 **Step 4. Try a first delegate**
 
@@ -214,8 +216,11 @@ Hands a task to Grok through the `grok:grok-delegate` subagent.
 /grok:delegate --resume apply the top fix from the last run
 /grok:delegate --model grok-composer-2.5-fast --effort high investigate the flaky test
 /grok:delegate --background investigate the regression
-/grok:delegate --no-web continue the analysis with this 20k-token brief
+/grok:delegate --no-subagents investigate the failing test
+/grok:delegate --web search for recent breaking changes in the dependency
 ```
+
+Web search is **disabled by default**. Use `--web` when you want Grok to search the web for this run. Use `--no-web` to force-disable even when the workspace default is on.
 
 You can also ask naturally:
 
@@ -231,7 +236,9 @@ Ask Grok to redesign the database connection to be more resilient.
 | `--fresh` | Start a new Grok session |
 | `--model <id>` | Pick a model (e.g. `grok-composer-2.5-fast`) |
 | `--effort <level>` | `low`, `medium`, `high`, `xhigh`, or `max` |
-| `--no-web` / `--disable-web-search` | Disable Grok web search for this run (useful for large prompts that trigger `400 Bad Request`) |
+| `--no-web` / `--disable-web-search` | Force-disable web search for this run |
+| `--web` / `--enable-web-search` | Enable web search for this run (overrides workspace default) |
+| `--no-subagents` | Call `grok-companion task` directly; skip the delegate subagent |
 
 Delegate runs are **write-capable by default** (Grok can edit files). Ask explicitly for read-only behavior if you only want investigation or review.
 
@@ -252,7 +259,18 @@ Read-only code review. Does not modify files.
 | `--scope working-tree` | Review only uncommitted changes |
 | `--scope branch` | Review against the default base branch |
 | `--background` | Run review in the background |
-| `--no-web` / `--disable-web-search` | Disable web search for this review run |
+| `--no-web` / `--disable-web-search` | Force-disable web search for this review run |
+| `--web` / `--enable-web-search` | Enable web search for this review run |
+
+### `/grok:web`
+
+```text
+/grok:web
+/grok:web on
+/grok:web off
+```
+
+Runs instantly. Default is **off** (web search disabled). `/grok:delegate` and `/grok:review` follow this unless you pass `--web` or `--no-web`.
 
 ### `/grok:status`, `/grok:result`, `/grok:cancel`
 
@@ -279,6 +297,12 @@ grok resume <session-id>
 /grok:setup     # check install + auth, offer install/login
 /grok:login     # sign in via full binary path (recommended after in-session install)
 ```
+
+When ready, `/grok:setup` also shows workspace defaults:
+
+- default model (`/grok:model` to change)
+- web search default (`/grok:web` to change; off by default)
+- hint for `/grok:delegate --no-subagents`
 
 ---
 
@@ -313,20 +337,30 @@ grok resume <session-id>
 /grok:delegate --resume keep going and apply the smallest fix
 ```
 
-### Large prompt handoff (disable web search)
+### Large prompt handoff
 
-When a long brief (~20k tokens) makes Grok web search return `400 Bad Request`:
+Web search is off by default, which avoids `400 Bad Request` on large briefs (~20k tokens):
 
 ```text
 /grok:model composer
-/grok:delegate --no-web <paste or reference your large brief>
+/grok:delegate <paste or reference your large brief>
 ```
 
-### Pick a workspace default model
+Use `--web` only when you explicitly want Grok to search the web.
+
+### Pick workspace defaults
 
 ```text
 /grok:model
 /grok:model grok-build
+/grok:web
+/grok:web on
+```
+
+### Fast delegate (skip subagent)
+
+```text
+/grok:delegate --no-subagents investigate the failing test
 ```
 
 ---
@@ -336,9 +370,10 @@ When a long brief (~20k tokens) makes Grok web search return `400 Bad Request`:
 ```text
 Claude Code
   └─ /grok:delegate
-       └─ grok:grok-delegate subagent
-            └─ grok-companion.mjs task
-                 └─ ~/.grok/bin/grok.exe --prompt-file <utf-8> --output-format json
+       ├─ (default) grok:grok-delegate subagent
+       │    └─ grok-companion.mjs task
+       └─ (--no-subagents) grok-companion.mjs task directly
+            └─ ~/.grok/bin/grok.exe --prompt-file <utf-8> [--disable-web-search] --output-format json
 ```
 
 The plugin:
@@ -348,6 +383,7 @@ The plugin:
 - respects `~/.grok/config.toml` and project `.grok/config.toml`
 - tracks jobs per workspace for background status/result/cancel
 - saves per-workspace default model via `/grok:model`
+- saves per-workspace web-search default via `/grok:web` (off by default; pass `--web` per run to enable)
 
 ---
 
@@ -367,7 +403,7 @@ Update the plugin:
 /reload-plugins
 ```
 
-Requires **v1.0.5** for `/grok:model`, `--no-web`, and Windows prompt-file fixes. `/grok:setup` can also run login on older cached installs.
+Requires **v1.0.6** for `/grok:web`, `--no-subagents`, default no-web, and workspace settings in `/grok:setup`. `/grok:setup` can also run login on older cached installs.
 
 ### `/grok:setup` says needs authentication
 
@@ -425,7 +461,10 @@ Yes. This plugin is independent of the Codex plugin. Use `/codex:rescue` for Cod
 npm test
 node plugins/grok/scripts/grok-companion.mjs setup
 node plugins/grok/scripts/grok-companion.mjs model
+node plugins/grok/scripts/grok-companion.mjs web
 ```
+
+CI runs `npm test` on push/PR via `.github/workflows/test.yml`.
 
 ### Releasing
 

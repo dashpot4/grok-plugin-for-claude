@@ -41,6 +41,31 @@ test("renderSetupReport mentions install guidance when grok is missing", () => {
   assert.match(rendered, /needs attention/);
 });
 
+test("renderSetupReport shows workspace settings when present", () => {
+  const rendered = renderSetupReport({
+    ready: true,
+    node: { available: true, detail: "v22.0.0" },
+    grok: { available: true, detail: "grok 1.0" },
+    auth: { authenticated: true, detail: "logged in" },
+    sessionRuntime: { ready: true, label: "ready" },
+    workspace: {
+      model: {
+        selectedModel: "grok-composer-2.5-fast",
+        selectedLabel: "Composer 2.5 Fast"
+      },
+      web: {
+        label: "disabled by default"
+      }
+    },
+    actionsTaken: []
+  });
+
+  assert.match(rendered, /Workspace settings/);
+  assert.match(rendered, /Composer 2.5 Fast/);
+  assert.match(rendered, /disabled by default/);
+  assert.match(rendered, /--no-subagents/);
+});
+
 test("grok-companion setup exits successfully", () => {
   const result = spawnSync(process.execPath, [COMPANION, "setup"], {
     cwd: ROOT,

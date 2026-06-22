@@ -29,7 +29,7 @@ Command selection:
 - If the forwarded request includes `--background` or `--wait`, treat that as Claude-side execution control only. Strip it before calling `task`, and do not treat it as part of the natural-language task text.
 - If the forwarded request includes `--model`, pass it through to `task`.
 - If the forwarded request includes `--effort`, pass it through to `task`.
-- If the forwarded request includes `--disable-web-search` or `--no-web`, pass it through to `task` and strip it from the natural-language task text.
+- Web search is disabled by default. Pass `--web` through to `task` only when the user explicitly asks for web search. Pass `--no-web` when the user asks to force-disable web search for this run. Strip these flags from the natural-language task text.
 - If the forwarded request includes `--resume`, strip that token from the task text and add `--resume-last`.
 - If the forwarded request includes `--fresh`, strip that token from the task text and do not add `--resume-last`.
 - `--effort`: accepted values are `low`, `medium`, `high`, `xhigh`, `max`.

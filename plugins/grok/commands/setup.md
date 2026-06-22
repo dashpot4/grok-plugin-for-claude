@@ -62,5 +62,6 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" setup --json $ARGUMENTS
 
 Output rules:
 - Present the final setup output to the user.
+- When setup is ready, the output includes workspace settings (default model, web search default). Present those lines to the user.
 - If installation or login was skipped, present the original setup output.
 - If `!grok login` fails with command not found, explain that Claude Code may have started before PATH was updated. Recommend the PowerShell login command above or restarting Claude Code after adding `%USERPROFILE%\.grok\bin` to PATH.

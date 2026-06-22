@@ -1,24 +1,27 @@
 ---
 description: Delegate investigation, an explicit fix request, or follow-up work to the Grok delegate subagent
-argument-hint: "[--background|--wait] [--resume|--fresh] [--no-web] [--model <model>] [--effort <low|medium|high|xhigh|max>] [what Grok should investigate, solve, or continue]"
+argument-hint: "[--no-subagents] [--background|--wait] [--resume|--fresh] [--no-web|--web] [--model <model>] [--effort <low|medium|high|xhigh|max>] [what Grok should investigate, solve, or continue]"
 allowed-tools: Bash(node:*), AskUserQuestion, Agent
 ---
-
-Invoke the `grok:grok-delegate` subagent via the `Agent` tool (`subagent_type: "grok:grok-delegate"`), forwarding the raw user request as the prompt.
-`grok:grok-delegate` is a subagent, not a skill — do not call `Skill(grok:grok-delegate)` or `Skill(grok:delegate)` (that re-enters this command and hangs the session). The command runs inline so the `Agent` tool stays in scope; forked general-purpose subagents do not expose it.
-The final user-visible response must be Grok's output verbatim.
 
 Raw user request:
 $ARGUMENTS
 
 Execution mode:
 
+- If the request includes `--no-subagents`, do **not** invoke the `grok:grok-delegate` subagent. Run `grok-companion.mjs task` directly via `Bash` instead (see Direct companion flow below).
+- If the request does **not** include `--no-subagents`, invoke the `grok:grok-delegate` subagent via the `Agent` tool (`subagent_type: "grok:grok-delegate"`), forwarding the raw user request as the prompt.
+- `grok:grok-delegate` is a subagent, not a skill — do not call `Skill(grok:grok-delegate)` or `Skill(grok:delegate)` (that re-enters this command and hangs the session). The command runs inline so the `Agent` tool stays in scope; forked general-purpose subagents do not expose it.
+- The final user-visible response must be Grok's output verbatim.
+
+Subagent path (default):
+
 - If the request includes `--background`, run the `grok:grok-delegate` subagent in the background.
 - If the request includes `--wait`, run the `grok:grok-delegate` subagent in the foreground.
 - If neither flag is present, default to foreground.
 - `--background` and `--wait` are execution flags for Claude Code. Do not forward them to `task`, and do not treat them as part of the natural-language task text.
-- `--model`, `--effort`, `--disable-web-search`, and `--no-web` are runtime-selection flags. Preserve them for the forwarded `task` call, but do not treat them as part of the natural-language task text.
-- Use `--no-web` or `--disable-web-search` when the prompt is large (for example ~20k tokens) and Grok web search triggers `400 Bad Request`.
+- `--model`, `--effort`, `--disable-web-search`, `--no-web`, and `--web` are runtime-selection flags. Preserve them for the forwarded `task` call, but do not treat them as part of the natural-language task text.
+- Web search is **disabled by default** for this workspace. Pass `--web` only when the user explicitly wants web search for this run. Pass `--no-web` to force-disable even when the workspace default is on.
 - If the request includes `--resume`, do not ask whether to continue. The user already chose.
 - If the request includes `--fresh`, do not ask whether to continue. The user already chose.
 - Otherwise, before starting Grok, check for a resumable delegate thread from this Claude session by running:
@@ -37,7 +40,7 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task-resume-candidate --
 - If the user chooses a new thread, add `--fresh` before routing to the subagent.
 - If the helper reports `available: false`, do not ask. Route normally.
 
-Operating rules:
+Subagent operating rules:
 
 - The subagent is a thin forwarder only. It should use one `Bash` call to invoke `node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task ...` and return that command's stdout as-is.
 - Return the Grok companion stdout verbatim to the user.
@@ -48,3 +51,31 @@ Operating rules:
 - Leave `--resume` and `--fresh` in the forwarded request. The subagent handles that routing when it builds the `task` command.
 - If the helper reports that Grok is missing or unauthenticated, stop and tell the user to run `/grok:setup`.
 - If the user did not supply a request, ask what Grok should investigate or fix.
+
+Direct companion flow (`--no-subagents`):
+
+- Strip `--no-subagents` before building the companion command. Do not treat it as part of the task text.
+- Apply the same resume/fresh rules as the subagent path (including `task-resume-candidate` + `AskUserQuestion` when neither `--resume` nor `--fresh` is present).
+- Map routing flags to companion args:
+  - `--resume` → `--resume-last`
+  - `--fresh` → omit `--resume-last`
+  - `--background` / `--wait` → Claude-side only; strip before `task`
+  - `--model`, `--effort`, `--no-web`, `--web` → pass through to `task`
+- Add `--write` unless the user explicitly asks for read-only behavior.
+- Foreground:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task <flags and task text>
+```
+
+- Background:
+
+```typescript
+Bash({
+  command: `node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task <flags and task text>`,
+  description: "Grok task",
+  run_in_background: true
+})
+```
+
+- Return the command stdout verbatim. For background, tell the user to check `/grok:status`.

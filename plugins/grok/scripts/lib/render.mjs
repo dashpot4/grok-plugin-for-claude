@@ -78,6 +78,32 @@ function pushJobDetails(lines, job, options = {}) {
   }
 }
 
+export function renderWebReport(report) {
+  const lines = [
+    "# Grok Web Search",
+    "",
+    `Default: ${report.label}`,
+    `Web search enabled: ${report.webSearchEnabled ? "yes" : "no"}`,
+    ""
+  ];
+
+  if (report.changed) {
+    lines.push(
+      "Saved for this workspace. Future `/grok:delegate` and `/grok:review` runs use this default unless you pass `--web` or `--no-web`."
+    );
+    lines.push("");
+  } else if (report.action === "show") {
+    lines.push("Per-run overrides:");
+    lines.push("- Enable web search for one run: `--web`");
+    lines.push("- Disable web search for one run: `--no-web`");
+    lines.push("");
+    lines.push("Change workspace default: `/grok:web on` or `/grok:web off`");
+    lines.push("");
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
 export function renderModelReport(report) {
   const lines = [
     "# Grok Model",
@@ -160,6 +186,18 @@ export function renderSetupReport(report) {
   if (report.grok.available && report.grok.command !== "grok") {
     lines.push(`Grok binary: ${report.grok.command}`);
     lines.push("Claude Code is using the default install path because `grok` is not on PATH in this session.");
+    lines.push("");
+  }
+
+  if (report.workspace) {
+    lines.push("Workspace settings:");
+    lines.push(
+      `- Default model: ${report.workspace.model.selectedLabel} (\`${report.workspace.model.selectedModel}\`)`
+    );
+    lines.push(`- Web search: ${report.workspace.web.label}`);
+    lines.push("- Change model: `/grok:model grok-build` or `/grok:model composer`");
+    lines.push("- Change web default: `/grok:web on` or `/grok:web off`");
+    lines.push("- Skip delegate subagent: `/grok:delegate --no-subagents ...`");
     lines.push("");
   }
 

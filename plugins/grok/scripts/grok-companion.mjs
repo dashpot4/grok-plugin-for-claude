@@ -38,7 +38,8 @@ import {
   renderSetupReport,
   renderStatusReport,
   renderStoredJobResult,
-  renderTaskResult
+  renderTaskResult,
+  renderWebReport
 } from "./lib/render.mjs";
 import {
   buildModelSnapshot,
@@ -47,6 +48,12 @@ import {
   validateModelSelection,
   listGrokModels
 } from "./lib/model.mjs";
+import {
+  PLUGIN_DISABLE_WEB_SEARCH_KEY,
+  buildWebSnapshot,
+  normalizeWebSetting,
+  resolveDisableWebSearch
+} from "./lib/web.mjs";
 import { generateJobId, listJobs, setConfig, upsertJob, writeJobFile } from "./lib/state.mjs";
 import {
   appendLogLine,
@@ -67,12 +74,13 @@ function printUsage() {
     [
       "Usage:",
       "  node scripts/grok-companion.mjs setup [--json]",
-      "  node scripts/grok-companion.mjs review [--wait|--background] [--disable-web-search|--no-web] [--base <ref>] [--scope <auto|working-tree|branch>]",
-      "  node scripts/grok-companion.mjs task [--background] [--write] [--disable-web-search|--no-web] [--resume-last|--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh|max>] [prompt]",
+      "  node scripts/grok-companion.mjs review [--wait|--background] [--disable-web-search|--no-web|--web] [--base <ref>] [--scope <auto|working-tree|branch>]",
+      "  node scripts/grok-companion.mjs task [--background] [--write] [--disable-web-search|--no-web|--web] [--resume-last|--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh|max>] [prompt]",
       "  node scripts/grok-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/grok-companion.mjs result [job-id] [--json]",
       "  node scripts/grok-companion.mjs cancel [job-id] [--json]",
       "  node scripts/grok-companion.mjs model [--set <model>] [--json]",
+      "  node scripts/grok-companion.mjs web [--set on|off] [--json]",
       "  node scripts/grok-companion.mjs task-resume-candidate [--json]"
     ].join("\n")
   );
@@ -156,17 +164,20 @@ function filterJobsForCurrentClaudeSession(jobs) {
   return jobs.filter((job) => job.sessionId === sessionId);
 }
 
-async function buildSetupReport(actionsTaken = []) {
+async function buildSetupReport(workspaceRoot, actionsTaken = []) {
   const node = binaryAvailable("node", ["--version"]);
   const grok = getGrokAvailability();
   const auth = getGrokAuthStatus();
   const sessionRuntime = getSessionRuntimeStatus();
+  const model = buildModelSnapshot(workspaceRoot);
+  const web = buildWebSnapshot(workspaceRoot);
   return {
     ready: grok.available && auth.authenticated,
     node,
     grok,
     auth,
     sessionRuntime,
+    workspace: { model, web },
     actionsTaken
   };
 }
@@ -177,7 +188,8 @@ async function handleSetup(argv) {
     booleanOptions: ["json"]
   });
 
-  const report = await buildSetupReport();
+  const workspaceRoot = resolveCommandWorkspace(options);
+  const report = await buildSetupReport(workspaceRoot);
   outputResult(options.json ? report : renderSetupReport(report), options.json);
 }
 
@@ -351,8 +363,8 @@ function buildTaskJob(workspaceRoot, taskMetadata, write) {
   });
 }
 
-function resolveDisableWebSearchOption(options) {
-  return Boolean(options["disable-web-search"] || options["no-web"]);
+function resolveDisableWebSearchOption(workspaceRoot, options) {
+  return resolveDisableWebSearch(workspaceRoot, options);
 }
 
 function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, disableWebSearch, jobId }) {
@@ -439,7 +451,7 @@ function enqueueBackgroundTask(cwd, job, request) {
 async function handleReview(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["base", "scope", "model", "cwd"],
-    booleanOptions: ["json", "background", "wait", "disable-web-search", "no-web"],
+    booleanOptions: ["json", "background", "wait", "disable-web-search", "no-web", "web", "enable-web-search"],
     aliasMap: { m: "model" }
   });
 
@@ -447,7 +459,7 @@ async function handleReview(argv) {
   const workspaceRoot = resolveCommandWorkspace(options);
   const explicitModel = options.model ? String(options.model).trim() : null;
   const model = resolvePluginModel(workspaceRoot, explicitModel);
-  const disableWebSearch = resolveDisableWebSearchOption(options);
+  const disableWebSearch = resolveDisableWebSearchOption(workspaceRoot, options);
   const focusText = positionals.join(" ").trim();
   const target = resolveReviewTarget(cwd, {
     base: options.base,
@@ -483,7 +495,18 @@ async function handleReview(argv) {
 async function handleTask(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["model", "effort", "cwd", "prompt-file"],
-    booleanOptions: ["json", "write", "resume-last", "resume", "fresh", "background", "disable-web-search", "no-web"],
+    booleanOptions: [
+      "json",
+      "write",
+      "resume-last",
+      "resume",
+      "fresh",
+      "background",
+      "disable-web-search",
+      "no-web",
+      "web",
+      "enable-web-search"
+    ],
     aliasMap: { m: "model" }
   });
 
@@ -499,7 +522,7 @@ async function handleTask(argv) {
     throw new Error("Choose either --resume/--resume-last or --fresh.");
   }
   const write = Boolean(options.write);
-  const disableWebSearch = resolveDisableWebSearchOption(options);
+  const disableWebSearch = resolveDisableWebSearchOption(workspaceRoot, options);
   const taskMetadata = buildTaskRunMetadata({ prompt, resumeLast });
 
   if (options.background) {
@@ -640,6 +663,37 @@ function handleTaskResumeCandidate(argv) {
   outputCommandResult(payload, rendered, options.json);
 }
 
+function handleWeb(argv) {
+  const { options, positionals } = parseCommandInput(argv, {
+    valueOptions: ["set", "cwd"],
+    booleanOptions: ["json"]
+  });
+
+  const workspaceRoot = resolveCommandWorkspace(options);
+  const requestedSetting = options.set ?? (positionals.join(" ").trim() || null);
+
+  if (requestedSetting) {
+    const disableWebSearch = normalizeWebSetting(requestedSetting);
+    setConfig(workspaceRoot, PLUGIN_DISABLE_WEB_SEARCH_KEY, disableWebSearch);
+    const snapshot = buildWebSnapshot(workspaceRoot);
+    const payload = {
+      action: "set",
+      changed: true,
+      ...snapshot
+    };
+    outputCommandResult(payload, renderWebReport(payload), options.json);
+    return;
+  }
+
+  const snapshot = buildWebSnapshot(workspaceRoot);
+  const payload = {
+    action: "show",
+    changed: false,
+    ...snapshot
+  };
+  outputCommandResult(payload, renderWebReport(payload), options.json);
+}
+
 function handleModel(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["set", "cwd"],
@@ -757,6 +811,9 @@ async function main() {
       break;
     case "model":
       handleModel(argv);
+      break;
+    case "web":
+      handleWeb(argv);
       break;
     case "cancel":
       handleCancel(argv);
