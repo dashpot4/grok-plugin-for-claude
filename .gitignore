@@ -6,5 +6,4 @@ terminals/
 Thumbs.db
 *.log
 .env
-.env.*handoff.md
-progress.md
+docs/
