@@ -7,6 +7,9 @@
 - Natural language effort phrases (e.g. "grok max 모드로", "use maximum effort", "최대 effort") are now detected in delegate/review requests and converted to the proper `--effort` flag
 - `/grok:setup` now shows the reasoning effort default
 - Added `effort.mjs` and full wiring for defaults and per-run (including review path)
+- Advanced Grok features (generate/edit image, video, vision/analysis, file upload, brainstorm, search, code exec) supported via `/grok:delegate` with natural language detection and exact path preservation
+- Enhanced permission/file handling guidance in delegate prompts, agent, skill, setup, and README so Claude can manage OS/approval issues well
+- Updated README with Advanced Features section and examples from user capabilities list
 
 ## 1.0.6 — 2026-06-23
 

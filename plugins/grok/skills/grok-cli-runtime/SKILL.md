@@ -25,6 +25,16 @@ Execution rules:
   - "low", "낮음", "low effort" → `--effort low`
   If a specific effort is clearly requested (in any form), include the corresponding `--effort <level>` when building the `task` command.
 - Leave model unset by default. Add `--model` only when the user explicitly asks for one.
+- Advanced Grok features support (image/video, vision, files, search, code):
+  - Recognize and forward accurately: "generate image", "edit image at [path]", "analyze image [path]", "grok vision", "generate video", "edit video", "upload file at [path]", "brainstorm", "grok search x", "run code", "calculate".
+  - Preserve every file path, URL, or detail exactly. Do not summarize or alter paths.
+  - Vision/analysis: Include the image path in the prompt so the `grok` binary can process it.
+  - Generation/edit: The upstream delegation usually enables writes when needed.
+- Permission handling (key for file/folder operations):
+  - File access (read for vision, write for edits/generation) is handled by the `grok` process in the workspace cwd.
+  - Be explicit with paths in the `node ... task` command. If permission problems arise (e.g. "permission denied"), the output will surface them for the main Claude session to handle or re-delegate with different scope.
+  - Do not hide or auto-resolve permissions. Structure the forwarded prompt so the main Claude can approve the initial Bash delegation or use --no-subagents for more control.
+  - For sensitive or complex file tasks, the subagent should just forward cleanly; permission decisions stay with the user/Claude main thread.
 - Default to write-capable Grok work in `grok:grok-delegate` unless the user explicitly asks for read-only behavior.
 - Preserve the user's task text as-is apart from stripping routing flags.
 - Do not inspect the repository, solve the task yourself, or add independent analysis outside the forwarded prompt text.

@@ -27,6 +27,23 @@ Subagent path (default):
   - "high effort", "높은 effort" → `--effort high`
   - Similar for medium/low.
   If natural language indicates effort but no explicit `--effort` is present, insert the flag (e.g. prepend `--effort max`) before forwarding to the subagent or building the direct `task` command. Prefer any explicit `--effort` over inferred.
+- Advanced Grok features (image/video generation, vision/analysis, file operations): Detect natural language requests for these and forward accurately:
+  - Image: "generate image", "grok generate image", "create image of", "grok image"
+  - Edit image: "edit image at PATH", "modify image", "grok edit image ./file.jpg to ..."
+  - Analyze/vision: "analyze image at PATH", "grok vision", "describe image ./screenshot.png", "grok analyze image"
+  - Video: "generate video", "grok generate video", "edit video ./clip.mp4"
+  - File upload: "upload file", "grok upload file at ./report.pdf"
+  - Brainstorm/search: "brainstorm ideas", "grok search for", "grok search x for"
+  - Code/calc: "run code", "calculate", "grok calculate"
+  Always preserve exact file paths mentioned (e.g. ./photo.jpg, /absolute/path/video.mp4). Do not rewrite or summarize paths.
+- Permission and file handling guidance (important for Claude to manage safely):
+  - When the request touches files/folders (read for vision/analysis, write for edit/generate), keep paths verbatim.
+  - For read-only analysis/vision/describe: Forward as-is; Grok binary will attempt read access based on current user/shell permissions.
+  - For modifications/generation that may save files: Ensure write-capable delegation (default behavior adds --write). If user might not want auto-approve, consider --no-subagents or note it.
+  - If permission issues are likely (e.g., restricted dirs, read-only workspace), include explicit notes in the forwarded prompt like "Note: access may require user approval for file X".
+  - Claude (main session) should handle approvals for the initial delegation Bash call. For internal Grok approvals during execution, they will appear in the returned output.
+  - Prefer absolute paths when possible for reliability, but respect user's provided relative paths.
+  - Never assume files are accessible; if the task involves specific files, the prompt must contain the paths so Grok can reference them.
 - Web search is **disabled by default** for this workspace. Pass `--web` only when the user explicitly wants web search for this run. Pass `--no-web` to force-disable even when the workspace default is on.
 - If the request includes `--resume`, do not ask whether to continue. The user already chose.
 - If the request includes `--fresh`, do not ask whether to continue. The user already chose.
@@ -52,7 +69,8 @@ Subagent operating rules:
 - Return the Grok companion stdout verbatim to the user.
 - Do not paraphrase, summarize, rewrite, or add commentary before or after it.
 - Do not ask the subagent to inspect files, monitor progress, poll `/grok:status`, fetch `/grok:result`, call `/grok:cancel`, summarize output, or do follow-up work of its own.
-- Detect and forward effort (explicit `--effort` or natural language like "grok max 모드", "max effort", "최대 effort" etc.) as described above. Do not add effort if the user gives no indication of wanting a specific level.
+- Detect and forward effort (explicit `--effort` or natural language) and advanced features (image/video gen, vision, file ops) as described in the detection rules above. Preserve exact paths for any file references.
+- When files/folders are involved, structure the forwarded request so the main Claude can manage permissions (exact paths, clear intent). See permission guidance above.
 - Leave the model unset unless the user explicitly asks for one.
 - Leave `--resume` and `--fresh` in the forwarded request. The subagent handles that routing when it builds the `task` command.
 - If the helper reports that Grok is missing or unauthenticated, stop and tell the user to run `/grok:setup`.

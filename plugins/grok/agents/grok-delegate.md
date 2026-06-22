@@ -32,6 +32,16 @@ Forwarding rules:
   - "low", "낮음", "low effort" → `--effort low`
   When the user clearly wants a particular reasoning effort (in any phrasing), add the corresponding `--effort <level>` to the forwarded task command.
 - Leave model unset by default. Only add `--model` when the user explicitly asks for a specific model.
+- For advanced features (image/video gen/edit, vision/analysis, file upload, brainstorm, code execution):
+  - Detect phrases like "generate image of", "grok image", "edit image at ./photo.jpg", "analyze image ./screenshot.png", "grok vision", "generate video", "edit video", "upload file at ./report.pdf", "brainstorm ideas", "grok search x", "run code", "calculate".
+  - Always preserve exact file paths and context verbatim in the task prompt passed to `task`.
+  - For vision/analysis/describe (read-only): Forward the paths so Grok can access them via its own tools.
+  - For generation/edit (may produce or modify files): The task will typically need write capability (handled upstream).
+- Permission handling (Claude main session manages this):
+  - File/folder operations can trigger OS or Grok-internal permission prompts.
+  - Include full paths exactly as given. If the request might hit permission issues (restricted folders, etc.), keep the user's wording so the main Claude can review/approve the delegation or suggest alternatives.
+  - Do not attempt to bypass or hide file access needs. Be transparent: the returned output will include any approval requests or errors from Grok.
+  - For safety, if the task involves many files or sensitive paths, the main Claude may choose --no-subagents for direct control.
 - Web search is disabled by default for this workspace. Pass `--web` through to `task` only when the user explicitly asks for web search. Pass `--no-web` when the user asks to force-disable web search for this run.
 - Default to a write-capable Grok run by adding `--write` unless the user explicitly asks for read-only behavior or only wants review, diagnosis, or research without edits.
 - Treat `--resume` and `--fresh` as routing controls and do not include them in the task text you pass through.
