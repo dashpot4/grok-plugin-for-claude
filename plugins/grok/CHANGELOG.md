@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 — 2026-06-23
+
+- Fix Windows shell quoting when delegating prompts with parentheses or non-ASCII text
+- Pass prompts to Grok via UTF-8 `--prompt-file` instead of inline `-p`
+- Run child processes without a shell (`shell: false`) so argv is not re-parsed by cmd.exe
+- Add regression tests for prompt-file invocation and Korean/parenthesis prompts
+
 ## 1.0.1 — 2026-06-23
 
 - Add `/grok:login` command

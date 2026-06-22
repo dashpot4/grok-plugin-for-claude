@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { createTempDir } from "./fs.mjs";
 import { binaryAvailable, runCommand } from "./process.mjs";
 
 const AUTH_FILE = path.join(os.homedir(), ".grok", "auth.json");
@@ -103,11 +104,23 @@ export function parseGrokJsonOutput(stdout) {
   }
 }
 
+export function preparePromptFile(prompt) {
+  const tempDir = createTempDir("grok-prompt-");
+  const promptFile = path.join(tempDir, "prompt.txt");
+  fs.writeFileSync(promptFile, prompt, "utf8");
+  return {
+    promptFile,
+    cleanup() {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  };
+}
+
 export function buildGrokArgs(cwd, options = {}) {
   const args = [];
 
-  if (options.prompt) {
-    args.push("-p", options.prompt);
+  if (options.promptFile) {
+    args.push("--prompt-file", options.promptFile);
   }
 
   args.push("--output-format", "json", "--cwd", cwd, "--max-turns", String(options.maxTurns ?? DEFAULT_MAX_TURNS));
@@ -138,53 +151,66 @@ export function buildGrokArgs(cwd, options = {}) {
 }
 
 export function runGrokTurn(cwd, options = {}) {
-  const args = buildGrokArgs(cwd, options);
+  let promptFile = options.promptFile ?? null;
+  let cleanupPrompt = null;
+
+  if (!promptFile && options.prompt) {
+    const prepared = preparePromptFile(options.prompt);
+    promptFile = prepared.promptFile;
+    cleanupPrompt = prepared.cleanup;
+  }
+
+  const args = buildGrokArgs(cwd, { ...options, promptFile });
   options.onProgress?.({ message: "Starting Grok...", phase: "starting" });
 
-  const result = runCommand(resolveGrokCommand(), args, {
-    cwd,
-    maxBuffer: 64 * 1024 * 1024
-  });
+  try {
+    const result = runCommand(resolveGrokCommand(), args, {
+      cwd,
+      maxBuffer: 64 * 1024 * 1024
+    });
 
-  if (result.error) {
-    throw result.error;
-  }
-
-  let parsed = null;
-  let text = "";
-  let sessionId = null;
-  let stopReason = null;
-
-  if (result.stdout.trim()) {
-    try {
-      parsed = parseGrokJsonOutput(result.stdout);
-      text = parsed.text ?? "";
-      sessionId = parsed.sessionId ?? null;
-      stopReason = parsed.stopReason ?? null;
-    } catch {
-      text = result.stdout.trim();
+    if (result.error) {
+      throw result.error;
     }
+
+    let parsed = null;
+    let text = "";
+    let sessionId = null;
+    let stopReason = null;
+
+    if (result.stdout.trim()) {
+      try {
+        parsed = parseGrokJsonOutput(result.stdout);
+        text = parsed.text ?? "";
+        sessionId = parsed.sessionId ?? null;
+        stopReason = parsed.stopReason ?? null;
+      } catch {
+        text = result.stdout.trim();
+      }
+    }
+
+    const stderr = (result.stderr || "").trim();
+    const status = result.status ?? 1;
+
+    options.onProgress?.({
+      message: status === 0 ? "Grok finished." : `Grok failed with exit ${status}.`,
+      phase: status === 0 ? "done" : "failed",
+      sessionId
+    });
+
+    return {
+      status,
+      stdout: result.stdout,
+      stderr,
+      finalMessage: text || stderr,
+      sessionId,
+      stopReason,
+      parsed,
+      failureMessage: status === 0 ? "" : stderr || text || `Grok exited with status ${status}.`
+    };
+  } finally {
+    cleanupPrompt?.();
   }
-
-  const stderr = (result.stderr || "").trim();
-  const status = result.status ?? 1;
-
-  options.onProgress?.({
-    message: status === 0 ? "Grok finished." : `Grok failed with exit ${status}.`,
-    phase: status === 0 ? "done" : "failed",
-    sessionId
-  });
-
-  return {
-    status,
-    stdout: result.stdout,
-    stderr,
-    finalMessage: text || stderr,
-    sessionId,
-    stopReason,
-    parsed,
-    failureMessage: status === 0 ? "" : stderr || text || `Grok exited with status ${status}.`
-  };
 }
 
 export function findLatestTaskSessionId(workspaceRoot, jobs) {
