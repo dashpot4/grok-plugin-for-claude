@@ -190,9 +190,10 @@ Yes, this is common on Windows. Grok installs to `%USERPROFILE%\.grok\bin`, but 
 
 Options:
 
-1. Run `/grok:login` inside Claude Code (uses the full path)
-2. Run `grok login` in a new PowerShell window, then restart Claude Code
-3. Add `%USERPROFILE%\.grok\bin` to your user PATH and restart Claude Code
+1. Run `/grok:setup` and choose **Run Grok login** (uses the full path)
+2. Or run `/grok:login` after updating the plugin to v1.0.1+
+3. Run `grok login` in a new PowerShell window, then restart Claude Code
+4. Add `%USERPROFILE%\.grok\bin` to your user PATH and restart Claude Code
 
 The plugin runtime also resolves `~/.grok/bin/grok.exe` directly, so `/grok:delegate` and `/grok:review` can work even when `!grok` does not.
 

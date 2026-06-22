@@ -1,5 +1,5 @@
 ---
-description: Check whether the local Grok Build CLI is ready and optionally install it
+description: Check whether the local Grok Build CLI is ready, optionally install it, and sign in
 argument-hint: ''
 allowed-tools: Bash(node:*), Bash(powershell:*), Bash(curl:*), AskUserQuestion
 ---
@@ -37,8 +37,30 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" setup --json $ARGUMENTS
 If Grok is already installed:
 - Do not ask about installation.
 
+If Grok is installed but not authenticated:
+- Use `AskUserQuestion` exactly once to ask whether Claude should run Grok login now.
+- Use these two options:
+  - `Run Grok login (Recommended)`
+  - `Skip for now`
+- If the user chooses login on Windows, run:
+
+```bash
+powershell -NoProfile -Command "& \"$env:USERPROFILE\.grok\bin\grok.exe\" login"
+```
+
+- If the user chooses login on macOS/Linux, run:
+
+```bash
+"$HOME/.grok/bin/grok" login
+```
+
+- Then rerun setup:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" setup --json $ARGUMENTS
+```
+
 Output rules:
 - Present the final setup output to the user.
-- If installation was skipped, present the original setup output.
-- If Grok is installed but not authenticated, tell the user to run `/grok:login`.
-- If `!grok login` fails with command not found, explain that Claude Code may have started before PATH was updated. Recommend `/grok:login` (full path) or restarting Claude Code after adding `%USERPROFILE%\.grok\bin` to PATH.
+- If installation or login was skipped, present the original setup output.
+- If `!grok login` fails with command not found, explain that Claude Code may have started before PATH was updated. Recommend the PowerShell login command above or restarting Claude Code after adding `%USERPROFILE%\.grok\bin` to PATH.
