@@ -1,7 +1,0 @@
----
-pid: 15736
-cwd: "C:\Users\lhs\Documents\agent_projs\claude_grok_mcp"
-command: "ssh -T git@github.com 2>&1"
-started_at: 2026-06-22T17:23:49.615Z
-running_for_ms: 215011   
----
