@@ -24,7 +24,7 @@ Inspired by the [Codex plugin for Claude Code](https://github.com/openai/codex-p
 In Claude Code:
 
 ```text
-/plugin marketplace add <your-github-user>/claude_grok_mcp
+/plugin marketplace add dashpot4/grok-plugin-for-claude
 /plugin install grok@grok-build
 /reload-plugins
 /grok:setup
@@ -33,7 +33,7 @@ In Claude Code:
 ### Local development
 
 ```text
-/plugin marketplace add ./path/to/claude_grok_mcp
+/plugin marketplace add ./path/to/grok-plugin-for-claude
 /plugin install grok@grok-build
 /reload-plugins
 /grok:setup
