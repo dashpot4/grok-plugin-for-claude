@@ -4,6 +4,7 @@
 
 - Add `--disable-web-search` and `--no-web` to `/grok:delegate`, `/grok:review`, and `grok-companion task|review`
 - Pass the flag through to Grok CLI to avoid web-search failures on large prompts (for example ~20k-token handoffs returning `400 Bad Request`)
+- Sync `README.md` with version history, flags, workflows, and release checklist
 
 ## 1.0.4 — 2026-06-23
 

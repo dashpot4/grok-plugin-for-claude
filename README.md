@@ -1,8 +1,12 @@
 # Grok plugin for Claude Code
 
+**Current version: 1.0.5**
+
 Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code to delegate tasks or run code reviews through a Grok subagent.
 
 Inspired by the [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc), this plugin wraps your local `grok` binary and exposes slash commands plus a `grok:grok-delegate` subagent.
+
+Full release history: [plugins/grok/CHANGELOG.md](plugins/grok/CHANGELOG.md)
 
 ## What You Get
 
@@ -44,6 +48,26 @@ For local development:
 ```
 
 After install you should see the slash commands above and `grok:grok-delegate` in `/agents`.
+
+Update to the latest release:
+
+```text
+/plugin marketplace update grok-build
+/plugin install grok@grok-build
+/reload-plugins
+```
+
+---
+
+## Recent changes
+
+| Version | Highlights |
+|---------|------------|
+| **1.0.5** | `--no-web` / `--disable-web-search` per run (helps with large prompts + web-search `400 Bad Request`) |
+| **1.0.4** | `/grok:model` is instant (like `/grok:status`); use `/grok:model grok-build` or `composer` |
+| **1.0.3** | `/grok:model` saves workspace default model (`grok-composer-2.5-fast` by default) |
+| **1.0.2** | Windows fix: prompts go through UTF-8 `--prompt-file` (parentheses / Korean safe) |
+| **1.0.1** | `/grok:login`, full-path Grok resolve when PATH is missing |
 
 ---
 
@@ -219,6 +243,7 @@ Read-only code review. Does not modify files.
 /grok:review
 /grok:review --base main
 /grok:review --background
+/grok:review --no-web --scope working-tree
 ```
 
 | Flag | Meaning |
@@ -227,6 +252,7 @@ Read-only code review. Does not modify files.
 | `--scope working-tree` | Review only uncommitted changes |
 | `--scope branch` | Review against the default base branch |
 | `--background` | Run review in the background |
+| `--no-web` / `--disable-web-search` | Disable web search for this review run |
 
 ### `/grok:status`, `/grok:result`, `/grok:cancel`
 
@@ -287,6 +313,22 @@ grok resume <session-id>
 /grok:delegate --resume keep going and apply the smallest fix
 ```
 
+### Large prompt handoff (disable web search)
+
+When a long brief (~20k tokens) makes Grok web search return `400 Bad Request`:
+
+```text
+/grok:model composer
+/grok:delegate --no-web <paste or reference your large brief>
+```
+
+### Pick a workspace default model
+
+```text
+/grok:model
+/grok:model grok-build
+```
+
 ---
 
 ## How it works
@@ -296,7 +338,7 @@ Claude Code
   └─ /grok:delegate
        └─ grok:grok-delegate subagent
             └─ grok-companion.mjs task
-                 └─ ~/.grok/bin/grok.exe -p ... --output-format json
+                 └─ ~/.grok/bin/grok.exe --prompt-file <utf-8> --output-format json
 ```
 
 The plugin:
@@ -305,6 +347,7 @@ The plugin:
 - reads auth from `~/.grok/auth.json`
 - respects `~/.grok/config.toml` and project `.grok/config.toml`
 - tracks jobs per workspace for background status/result/cancel
+- saves per-workspace default model via `/grok:model`
 
 ---
 
@@ -324,7 +367,7 @@ Update the plugin:
 /reload-plugins
 ```
 
-Requires v1.0.1+. `/grok:setup` can also run login on older cached installs.
+Requires **v1.0.5** for `/grok:model`, `--no-web`, and Windows prompt-file fixes. `/grok:setup` can also run login on older cached installs.
 
 ### `/grok:setup` says needs authentication
 
@@ -381,7 +424,18 @@ Yes. This plugin is independent of the Codex plugin. Use `/codex:rescue` for Cod
 ```bash
 npm test
 node plugins/grok/scripts/grok-companion.mjs setup
+node plugins/grok/scripts/grok-companion.mjs model
 ```
+
+### Releasing
+
+When bumping the plugin version, update these together in one commit:
+
+- `package.json`
+- `plugins/grok/.claude-plugin/plugin.json`
+- `.claude-plugin/marketplace.json`
+- `plugins/grok/CHANGELOG.md`
+- **`README.md`** (current version, Recent changes, usage flags/examples)
 
 ## License
 
