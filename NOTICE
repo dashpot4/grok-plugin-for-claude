@@ -1,0 +1,7 @@
+Grok plugin for Claude Code
+Copyright 2026 Lee HanSol
+
+This project is inspired by and adapted from the Codex plugin for Claude Code
+(https://github.com/openai/codex-plugin-cc) by OpenAI.
+
+Licensed under the Apache License, Version 2.0.

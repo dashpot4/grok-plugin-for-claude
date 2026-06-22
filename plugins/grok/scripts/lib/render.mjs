@@ -1,0 +1,248 @@
+function formatJobLine(job) {
+  const parts = [job.id, `${job.status || "unknown"}`];
+  if (job.kindLabel) {
+    parts.push(job.kindLabel);
+  }
+  if (job.title) {
+    parts.push(job.title);
+  }
+  return parts.join(" | ");
+}
+
+function escapeMarkdownCell(value) {
+  return String(value ?? "")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ")
+    .trim();
+}
+
+function formatGrokResumeCommand(job) {
+  if (!job?.threadId) {
+    return null;
+  }
+  return `grok resume ${job.threadId}`;
+}
+
+function appendActiveJobsTable(lines, jobs) {
+  lines.push("Active jobs:");
+  lines.push("| Job | Kind | Status | Phase | Elapsed | Grok Session ID | Summary | Actions |");
+  lines.push("| --- | --- | --- | --- | --- | --- | --- | --- |");
+  for (const job of jobs) {
+    const actions = [`/grok:status ${job.id}`];
+    if (job.status === "queued" || job.status === "running") {
+      actions.push(`/grok:cancel ${job.id}`);
+    }
+    lines.push(
+      `| ${escapeMarkdownCell(job.id)} | ${escapeMarkdownCell(job.kindLabel)} | ${escapeMarkdownCell(job.status)} | ${escapeMarkdownCell(job.phase ?? "")} | ${escapeMarkdownCell(job.elapsed ?? "")} | ${escapeMarkdownCell(job.threadId ?? "")} | ${escapeMarkdownCell(job.summary ?? "")} | ${actions.map((action) => `\`${action}\``).join("<br>")} |`
+    );
+  }
+}
+
+function pushJobDetails(lines, job, options = {}) {
+  lines.push(`- ${formatJobLine(job)}`);
+  if (job.summary) {
+    lines.push(`  Summary: ${job.summary}`);
+  }
+  if (job.phase) {
+    lines.push(`  Phase: ${job.phase}`);
+  }
+  if (options.showElapsed && job.elapsed) {
+    lines.push(`  Elapsed: ${job.elapsed}`);
+  }
+  if (options.showDuration && job.duration) {
+    lines.push(`  Duration: ${job.duration}`);
+  }
+  if (job.threadId) {
+    lines.push(`  Grok session ID: ${job.threadId}`);
+  }
+  const resumeCommand = formatGrokResumeCommand(job);
+  if (resumeCommand) {
+    lines.push(`  Resume in Grok: ${resumeCommand}`);
+  }
+  if (job.logFile && options.showLog) {
+    lines.push(`  Log: ${job.logFile}`);
+  }
+  if ((job.status === "queued" || job.status === "running") && options.showCancelHint) {
+    lines.push(`  Cancel: /grok:cancel ${job.id}`);
+  }
+  if (job.status !== "queued" && job.status !== "running" && options.showResultHint) {
+    lines.push(`  Result: /grok:result ${job.id}`);
+  }
+  if (job.progressPreview?.length) {
+    lines.push("  Progress:");
+    for (const line of job.progressPreview) {
+      lines.push(`    ${line}`);
+    }
+  }
+}
+
+export function renderSetupReport(report) {
+  const lines = [
+    "# Grok Setup",
+    "",
+    `Status: ${report.ready ? "ready" : "needs attention"}`,
+    "",
+    "Checks:",
+    `- node: ${report.node.detail}`,
+    `- grok: ${report.grok.detail}`,
+    `- auth: ${report.auth.detail}`,
+    `- session runtime: ${report.sessionRuntime.label}`,
+    ""
+  ];
+
+  if (report.actionsTaken.length > 0) {
+    lines.push("Actions taken:");
+    for (const action of report.actionsTaken) {
+      lines.push(`- ${action}`);
+    }
+    lines.push("");
+  }
+
+  if (!report.grok.available) {
+    lines.push("Install Grok CLI:");
+    lines.push("- Windows (PowerShell): `irm https://x.ai/cli/install.ps1 | iex`");
+    lines.push("- macOS/Linux: `curl -fsSL https://x.ai/cli/install.sh | bash`");
+    lines.push("- Or run `/grok:setup` and choose install when prompted.");
+    lines.push("");
+  }
+
+  if (report.grok.available && !report.auth.authenticated) {
+    lines.push("Authenticate Grok:");
+    lines.push("- Run `!grok login` in Claude Code");
+    lines.push("- Or run `grok login` in your terminal");
+    lines.push("");
+  }
+
+  if (report.ready) {
+    lines.push("Grok is ready. Try `/grok:delegate investigate the failing test` or `/grok:review`.");
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function renderReviewResult(result, meta) {
+  const text = typeof result?.finalMessage === "string" ? result.finalMessage : "";
+  if (text) {
+    return text.endsWith("\n") ? text : `${text}\n`;
+  }
+
+  const stderr = String(result?.stderr ?? "").trim();
+  const lines = ["# Grok Review", "", `Target: ${meta.targetLabel}`];
+  if (stderr) {
+    lines.push("", "stderr:", "", "```text", stderr, "```");
+  } else {
+    lines.push("", "Grok review completed without output.");
+  }
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function renderTaskResult(parsedResult) {
+  const rawOutput = typeof parsedResult?.rawOutput === "string" ? parsedResult.rawOutput : "";
+  if (rawOutput) {
+    return rawOutput.endsWith("\n") ? rawOutput : `${rawOutput}\n`;
+  }
+
+  const message = String(parsedResult?.failureMessage ?? "").trim() || "Grok did not return a final message.";
+  return `${message}\n`;
+}
+
+export function renderStatusReport(report) {
+  const lines = ["# Grok Status", "", `Session runtime: ${report.sessionRuntime.label}`, ""];
+
+  if (report.running.length > 0) {
+    appendActiveJobsTable(lines, report.running);
+    lines.push("");
+    lines.push("Live details:");
+    for (const job of report.running) {
+      pushJobDetails(lines, job, {
+        showElapsed: true,
+        showLog: true
+      });
+    }
+    lines.push("");
+  }
+
+  if (report.latestFinished) {
+    lines.push("Latest finished:");
+    pushJobDetails(lines, report.latestFinished, {
+      showDuration: true,
+      showLog: report.latestFinished.status === "failed"
+    });
+    lines.push("");
+  }
+
+  if (report.recent.length > 0) {
+    lines.push("Recent jobs:");
+    for (const job of report.recent) {
+      pushJobDetails(lines, job, {
+        showDuration: true,
+        showLog: job.status === "failed"
+      });
+    }
+    lines.push("");
+  } else if (report.running.length === 0 && !report.latestFinished) {
+    lines.push("No jobs recorded yet.", "");
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function renderJobStatusReport(job) {
+  const lines = ["# Grok Job Status", ""];
+  pushJobDetails(lines, job, {
+    showElapsed: job.status === "queued" || job.status === "running",
+    showDuration: job.status !== "queued" && job.status !== "running",
+    showLog: true,
+    showCancelHint: true,
+    showResultHint: true
+  });
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function renderStoredJobResult(job, storedJob) {
+  const threadId = storedJob?.threadId ?? job.threadId ?? null;
+  const resumeCommand = threadId ? `grok resume ${threadId}` : null;
+  const rawOutput =
+    (typeof storedJob?.result?.rawOutput === "string" && storedJob.result.rawOutput) ||
+    (typeof storedJob?.rendered === "string" && storedJob.rendered) ||
+    "";
+
+  if (rawOutput) {
+    const output = rawOutput.endsWith("\n") ? rawOutput : `${rawOutput}\n`;
+    if (!threadId) {
+      return output;
+    }
+    return `${output}\nGrok session ID: ${threadId}\nResume in Grok: ${resumeCommand}\n`;
+  }
+
+  const lines = [`# ${job.title ?? "Grok Result"}`, "", `Job: ${job.id}`, `Status: ${job.status}`];
+  if (threadId) {
+    lines.push(`Grok session ID: ${threadId}`);
+    lines.push(`Resume in Grok: ${resumeCommand}`);
+  }
+  if (job.summary) {
+    lines.push(`Summary: ${job.summary}`);
+  }
+  if (job.errorMessage || storedJob?.errorMessage) {
+    lines.push("", job.errorMessage || storedJob.errorMessage);
+  } else {
+    lines.push("", "No captured result payload was stored for this job.");
+  }
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function renderCancelReport(job) {
+  const lines = ["# Grok Cancel", "", `Cancelled ${job.id}.`, ""];
+  if (job.title) {
+    lines.push(`- Title: ${job.title}`);
+  }
+  if (job.summary) {
+    lines.push(`- Summary: ${job.summary}`);
+  }
+  lines.push("- Check `/grok:status` for the updated queue.");
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function renderQueuedTaskLaunch(payload) {
+  return `${payload.title} started in the background as ${payload.jobId}. Check /grok:status ${payload.jobId} for progress.\n`;
+}

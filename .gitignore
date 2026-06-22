@@ -1,0 +1,9 @@
+node_modules/
+codex-plugin-cc-ref/
+mcps/
+terminals/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*

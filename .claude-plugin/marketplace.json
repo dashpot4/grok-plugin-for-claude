@@ -1,0 +1,21 @@
+{
+  "name": "grok-build",
+  "owner": {
+    "name": "Lee HanSol"
+  },
+  "metadata": {
+    "description": "Grok Build CLI plugins for Claude Code — delegate tasks and run code reviews through Grok.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "grok",
+      "description": "Use Grok Build CLI from Claude Code to review code or delegate tasks.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Lee HanSol"
+      },
+      "source": "./plugins/grok"
+    }
+  ]
+}

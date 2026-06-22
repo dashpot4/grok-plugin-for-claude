@@ -1,0 +1,35 @@
+---
+name: grok-cli-runtime
+description: Internal helper contract for calling the grok-companion runtime from Claude Code
+user-invocable: false
+---
+
+# Grok Runtime
+
+Use this skill only inside the `grok:grok-delegate` subagent.
+
+Primary helper:
+- `node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task "<raw arguments>"`
+
+Execution rules:
+- The delegate subagent is a forwarder, not an orchestrator. Its only job is to invoke `task` once and return that stdout unchanged.
+- Prefer the helper over hand-rolled direct Grok CLI strings or any other Bash activity.
+- Do not call `setup`, `review`, `status`, `result`, or `cancel` from `grok:grok-delegate`.
+- Use `task` for every delegate request, including diagnosis, planning, research, and explicit fix requests.
+- Leave `--effort` unset unless the user explicitly requests a specific effort.
+- Leave model unset by default. Add `--model` only when the user explicitly asks for one.
+- Default to write-capable Grok work in `grok:grok-delegate` unless the user explicitly asks for read-only behavior.
+- Preserve the user's task text as-is apart from stripping routing flags.
+- Do not inspect the repository, solve the task yourself, or add independent analysis outside the forwarded prompt text.
+- Return the stdout of the `task` command exactly as-is.
+- If the Bash call fails or Grok cannot be invoked, return nothing.
+
+Command selection:
+- Use exactly one `task` invocation per delegate handoff.
+- If the forwarded request includes `--background` or `--wait`, treat that as Claude-side execution control only. Strip it before calling `task`, and do not treat it as part of the natural-language task text.
+- If the forwarded request includes `--model`, pass it through to `task`.
+- If the forwarded request includes `--effort`, pass it through to `task`.
+- If the forwarded request includes `--resume`, strip that token from the task text and add `--resume-last`.
+- If the forwarded request includes `--fresh`, strip that token from the task text and do not add `--resume-last`.
+- `--effort`: accepted values are `low`, `medium`, `high`, `xhigh`, `max`.
+- `task --resume-last`: internal helper for follow-up instructions after a previous delegate run.
