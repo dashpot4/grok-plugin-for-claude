@@ -190,6 +190,7 @@ Hands a task to Grok through the `grok:grok-delegate` subagent.
 /grok:delegate --resume apply the top fix from the last run
 /grok:delegate --model grok-composer-2.5-fast --effort high investigate the flaky test
 /grok:delegate --background investigate the regression
+/grok:delegate --no-web continue the analysis with this 20k-token brief
 ```
 
 You can also ask naturally:
@@ -206,6 +207,7 @@ Ask Grok to redesign the database connection to be more resilient.
 | `--fresh` | Start a new Grok session |
 | `--model <id>` | Pick a model (e.g. `grok-composer-2.5-fast`) |
 | `--effort <level>` | `low`, `medium`, `high`, `xhigh`, or `max` |
+| `--no-web` / `--disable-web-search` | Disable Grok web search for this run (useful for large prompts that trigger `400 Bad Request`) |
 
 Delegate runs are **write-capable by default** (Grok can edit files). Ask explicitly for read-only behavior if you only want investigation or review.
 

@@ -1,6 +1,6 @@
 ---
 description: Delegate investigation, an explicit fix request, or follow-up work to the Grok delegate subagent
-argument-hint: "[--background|--wait] [--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh|max>] [what Grok should investigate, solve, or continue]"
+argument-hint: "[--background|--wait] [--resume|--fresh] [--no-web] [--model <model>] [--effort <low|medium|high|xhigh|max>] [what Grok should investigate, solve, or continue]"
 allowed-tools: Bash(node:*), AskUserQuestion, Agent
 ---
 
@@ -17,7 +17,8 @@ Execution mode:
 - If the request includes `--wait`, run the `grok:grok-delegate` subagent in the foreground.
 - If neither flag is present, default to foreground.
 - `--background` and `--wait` are execution flags for Claude Code. Do not forward them to `task`, and do not treat them as part of the natural-language task text.
-- `--model` and `--effort` are runtime-selection flags. Preserve them for the forwarded `task` call, but do not treat them as part of the natural-language task text.
+- `--model`, `--effort`, `--disable-web-search`, and `--no-web` are runtime-selection flags. Preserve them for the forwarded `task` call, but do not treat them as part of the natural-language task text.
+- Use `--no-web` or `--disable-web-search` when the prompt is large (for example ~20k tokens) and Grok web search triggers `400 Bad Request`.
 - If the request includes `--resume`, do not ask whether to continue. The user already chose.
 - If the request includes `--fresh`, do not ask whether to continue. The user already chose.
 - Otherwise, before starting Grok, check for a resumable delegate thread from this Claude session by running:

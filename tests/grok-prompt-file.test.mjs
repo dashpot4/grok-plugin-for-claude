@@ -10,6 +10,12 @@ import { runCommand } from "../plugins/grok/scripts/lib/process.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ECHO_ARGS = path.join(ROOT, "tests", "fixtures", "echo-args.mjs");
 
+test("buildGrokArgs adds --disable-web-search when requested", () => {
+  const args = buildGrokArgs("C:\\workspace", { promptFile: "C:\\tmp\\p.txt", disableWebSearch: true });
+
+  assert.ok(args.includes("--disable-web-search"));
+});
+
 test("buildGrokArgs uses --prompt-file and never -p", () => {
   const promptFile = path.join("C:\\tmp", "prompt.txt");
   const args = buildGrokArgs("C:\\workspace", { promptFile, write: false });

@@ -147,6 +147,10 @@ export function buildGrokArgs(cwd, options = {}) {
     args.push("-c");
   }
 
+  if (options.disableWebSearch) {
+    args.push("--disable-web-search");
+  }
+
   return args;
 }
 

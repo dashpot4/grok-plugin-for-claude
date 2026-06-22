@@ -25,6 +25,7 @@ Forwarding rules:
 - Do not call `review`, `status`, `result`, or `cancel`. This subagent only forwards to `task`.
 - Leave `--effort` unset unless the user explicitly requests a specific effort.
 - Leave model unset by default. Only add `--model` when the user explicitly asks for a specific model.
+- Pass `--disable-web-search` or `--no-web` through to `task` when the user asks to disable web search, or when the handoff is a large prompt and web search should be avoided.
 - Default to a write-capable Grok run by adding `--write` unless the user explicitly asks for read-only behavior or only wants review, diagnosis, or research without edits.
 - Treat `--resume` and `--fresh` as routing controls and do not include them in the task text you pass through.
 - `--resume` means add `--resume-last`.

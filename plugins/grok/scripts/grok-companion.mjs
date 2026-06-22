@@ -67,8 +67,8 @@ function printUsage() {
     [
       "Usage:",
       "  node scripts/grok-companion.mjs setup [--json]",
-      "  node scripts/grok-companion.mjs review [--wait|--background] [--base <ref>] [--scope <auto|working-tree|branch>]",
-      "  node scripts/grok-companion.mjs task [--background] [--write] [--resume-last|--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh|max>] [prompt]",
+      "  node scripts/grok-companion.mjs review [--wait|--background] [--disable-web-search|--no-web] [--base <ref>] [--scope <auto|working-tree|branch>]",
+      "  node scripts/grok-companion.mjs task [--background] [--write] [--disable-web-search|--no-web] [--resume-last|--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh|max>] [prompt]",
       "  node scripts/grok-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/grok-companion.mjs result [job-id] [--json]",
       "  node scripts/grok-companion.mjs cancel [job-id] [--json]",
@@ -217,6 +217,7 @@ async function executeReviewRun(request) {
     prompt,
     model: request.model,
     write: false,
+    disableWebSearch: Boolean(request.disableWebSearch),
     onProgress: request.onProgress
   });
 
@@ -271,6 +272,7 @@ async function executeTaskRun(request) {
     model: request.model,
     effort: request.effort,
     write: Boolean(request.write),
+    disableWebSearch: Boolean(request.disableWebSearch),
     resumeSessionId,
     onProgress: request.onProgress
   });
@@ -349,7 +351,11 @@ function buildTaskJob(workspaceRoot, taskMetadata, write) {
   });
 }
 
-function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, jobId }) {
+function resolveDisableWebSearchOption(options) {
+  return Boolean(options["disable-web-search"] || options["no-web"]);
+}
+
+function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, disableWebSearch, jobId }) {
   return {
     cwd,
     model,
@@ -357,6 +363,7 @@ function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, jobId
     prompt,
     write,
     resumeLast,
+    disableWebSearch,
     jobId
   };
 }
@@ -432,7 +439,7 @@ function enqueueBackgroundTask(cwd, job, request) {
 async function handleReview(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["base", "scope", "model", "cwd"],
-    booleanOptions: ["json", "background", "wait"],
+    booleanOptions: ["json", "background", "wait", "disable-web-search", "no-web"],
     aliasMap: { m: "model" }
   });
 
@@ -440,6 +447,7 @@ async function handleReview(argv) {
   const workspaceRoot = resolveCommandWorkspace(options);
   const explicitModel = options.model ? String(options.model).trim() : null;
   const model = resolvePluginModel(workspaceRoot, explicitModel);
+  const disableWebSearch = resolveDisableWebSearchOption(options);
   const focusText = positionals.join(" ").trim();
   const target = resolveReviewTarget(cwd, {
     base: options.base,
@@ -464,6 +472,7 @@ async function handleReview(argv) {
         base: options.base,
         scope: options.scope,
         model,
+        disableWebSearch,
         focusText,
         onProgress: progress
       }),
@@ -474,7 +483,7 @@ async function handleReview(argv) {
 async function handleTask(argv) {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["model", "effort", "cwd", "prompt-file"],
-    booleanOptions: ["json", "write", "resume-last", "resume", "fresh", "background"],
+    booleanOptions: ["json", "write", "resume-last", "resume", "fresh", "background", "disable-web-search", "no-web"],
     aliasMap: { m: "model" }
   });
 
@@ -490,6 +499,7 @@ async function handleTask(argv) {
     throw new Error("Choose either --resume/--resume-last or --fresh.");
   }
   const write = Boolean(options.write);
+  const disableWebSearch = resolveDisableWebSearchOption(options);
   const taskMetadata = buildTaskRunMetadata({ prompt, resumeLast });
 
   if (options.background) {
@@ -503,6 +513,7 @@ async function handleTask(argv) {
       prompt,
       write,
       resumeLast,
+      disableWebSearch,
       jobId: job.id
     });
     const { payload } = enqueueBackgroundTask(cwd, job, request);
@@ -521,6 +532,7 @@ async function handleTask(argv) {
         prompt,
         write,
         resumeLast,
+        disableWebSearch,
         jobId: job.id,
         onProgress: progress
       }),

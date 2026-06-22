@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5 — 2026-06-23
+
+- Add `--disable-web-search` and `--no-web` to `/grok:delegate`, `/grok:review`, and `grok-companion task|review`
+- Pass the flag through to Grok CLI to avoid web-search failures on large prompts (for example ~20k-token handoffs returning `400 Bad Request`)
+
 ## 1.0.4 — 2026-06-23
 
 - Make `/grok:model` instant like `/grok:status` (`disable-model-invocation` + direct script output)
