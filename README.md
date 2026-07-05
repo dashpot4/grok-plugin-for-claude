@@ -1,8 +1,12 @@
-# Grok plugin for Claude Code
+# Grok Plugin for Claude Code | Use Grok in Claude Code
 
 **Current version: 1.0.7**
 
-Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code to delegate tasks or run code reviews through a Grok subagent.
+Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code. 
+
+This is the Grok plugin for Claude Code (also known as claude grok or grok claude code plugin). It wraps your local `grok` binary and lets you delegate tasks, do reviews, generate images, use vision, TTS, and more directly inside Claude Code.
+
+Popular search terms: claude code grok, grok claude code, claude grok plugin, use grok in claude code.
 
 Inspired by the [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc), this plugin wraps your local `grok` binary and exposes slash commands plus a `grok:grok-delegate` subagent.
 
@@ -17,13 +21,28 @@ Full release history: [plugins/grok/CHANGELOG.md](plugins/grok/CHANGELOG.md)
 | `/grok:model` | View or change the default Grok model for this workspace |
 | `/grok:web` | View or change the default web-search setting for this workspace |
 | `/grok:effort` | View or change the default reasoning effort for this workspace |
-| `/grok:delegate` | Hand investigation, fixes, or follow-up work to Grok |
+| `/grok:delegate` | General delegation. Also supports advanced features via natural language (image/video, vision, TTS/STT, etc.) |
 | `/grok:review` | Read-only Grok code review of your working tree or branch |
+| `/grok:image` | Generate images |
+| `/grok:edit-image` | Edit existing images (provide path + instructions) |
+| `/grok:video` | Generate videos |
+| `/grok:edit-video` | Edit existing videos |
+| `/grok:vision` | Analyze / describe images (vision) |
+| `/grok:tts` | Text-to-speech |
+| `/grok:stt` | Speech-to-text (transcribe audio) |
 | `/grok:status` | Show running and recent Grok jobs for this repo |
 | `/grok:result` | Show the final output of a finished job |
 | `/grok:cancel` | Cancel an active background Grok job |
 
 You also get the `grok:grok-delegate` subagent in `/agents`.
+
+**For better search visibility (Google, GitHub, Claude marketplace):**
+- GitHub repo **Description** (가장 중요): "Grok Build CLI plugin for Claude Code — claude grok, grok claude code, image generation, vision, delegate, review"
+- GitHub **Topics**: claude-code, claude, grok, xai, claude-plugin, ai, grok-build
+- README 첫 문단에 자연스럽게 키워드: claude code grok, grok claude code plugin, use grok in claude code
+- marketplace.json description도 키워드 포함
+
+(검색 엔진은 주로 README 상단 + GitHub 메타데이터를 봅니다)
 
 ## Requirements
 
@@ -65,7 +84,7 @@ Update to the latest release:
 
 | Version | Highlights |
 |---------|------------|
-| **1.0.7** | `/grok:effort` + advanced Grok features (image/video gen/edit, vision, file ops) via `/grok:delegate` with natural language + file path preservation + permission handling manual |
+| **1.0.7** | `/grok:effort` + full advanced Grok feature support (image/video generation & editing, vision/analysis, file upload, brainstorm, search, code execution, TTS, etc.) via `/grok:delegate` with natural language detection, exact path handling, and permission guidance |
 | **1.0.6** | `--no-subagents` direct delegate; `/grok:web`; web search off by default (`--web` to enable); setup shows workspace settings; CI |
 | **1.0.5** | `--no-web` / `--disable-web-search` per run (helps with large prompts + web-search `400 Bad Request`) |
 | **1.0.4** | `/grok:model` is instant (like `/grok:status`); use `/grok:model grok-build` or `composer` |
@@ -212,6 +231,8 @@ Runs instantly (no Claude orchestration). `/grok:delegate` and `/grok:review` us
 
 Hands a task to Grok through the `grok:grok-delegate` subagent.
 
+By default the delegate runs in the **foreground** and returns Grok's answer directly in the conversation — no follow-up commands needed. Pass `--background` only for long-running or fire-and-forget work, then retrieve the result with `/grok:status` and `/grok:result`.
+
 ```text
 /grok:delegate investigate why the build is failing in CI
 /grok:delegate fix the failing test with the smallest safe patch
@@ -234,8 +255,8 @@ Ask Grok to redesign the database connection to be more resilient.
 
 | Flag | Meaning |
 |------|---------|
-| `--background` | Run in the background; check with `/grok:status` and `/grok:result` |
-| `--wait` | Run in the foreground and wait for output |
+| `--background` | Long-running / fire-and-forget: launches a detached Grok worker and returns a job id. Retrieve the answer with `/grok:status` and `/grok:result`. Survives runs longer than ~10 minutes. |
+| `--wait` | **Default.** Run in the foreground and return Grok's answer in-band (no `/grok:status`/`/grok:result` needed). Best for normal tasks; bounded by a ~10-minute limit — use `--background` for longer runs. |
 | `--resume` | Continue the latest Grok session for this repo |
 | `--fresh` | Start a new Grok session |
 | `--model <id>` | Pick a model (e.g. `grok-composer-2.5-fast`) |
@@ -290,32 +311,40 @@ Runs instantly. Default is **off** (web search disabled). `/grok:delegate` and `
 
 Runs instantly. Sets the default reasoning effort (`low` / `medium` / `high` / `xhigh` / `max`) for `/grok:delegate` and `/grok:review` in this workspace. Use `none` or `clear` to remove the default (let Grok decide per call). Per-run override with `--effort` flag or natural language like "grok max 모드로".
 
-### Advanced Grok Features (via /grok:delegate)
+### Advanced Grok Features
 
-Most Grok capabilities can be used naturally through delegation. The plugin forwards your request (with smart detection for some flags like effort) to the local Grok CLI.
+Both dedicated commands **and** natural language via `/grok:delegate` are supported.
 
-**Examples:**
-- `/grok:delegate brainstorm ideas for new authentication system`
-- `/grok:delegate grok search for latest React 19 features`
-- `/grok:delegate grok search x for posts about Claude Code`
-- `/grok:delegate grok calculate the first 50 prime numbers`
-- `/grok:delegate grok generate image of a sunset over mountains`
-- `/grok:delegate grok edit image at ./photo.jpg to look like an oil painting`
-- `/grok:delegate grok generate an 8 second video of ocean waves`
-- `/grok:delegate grok analyze image at ./screenshot.png for UI issues`
+**Dedicated commands** (recommended for discoverability):
+- `/grok:image` — Generate images
+- `/grok:edit-image` — Edit existing images (provide path + instructions)
+- `/grok:video` — Generate videos
+- `/grok:edit-video` — Edit existing videos
+- `/grok:vision` — Analyze/describe images (vision)
+- `/grok:tts` — Text-to-speech
+- `/grok:stt` — Speech-to-text (transcribe audio)
+
+**Natural language** (still fully supported):
+`/grok:delegate grok generate image of a cyberpunk cat at night`
+`/grok:delegate grok edit image at ./photo.jpg to oil painting style`
+`/grok:delegate grok analyze image at ./screenshot.png for UI issues`
+
+The `/grok:delegate` command includes detection for common advanced patterns and preserves file paths exactly. Detailed permission guidance is included in the prompts so Claude can handle file access and approvals gracefully.
+
+See the individual command files and the `grok:grok-delegate` agent prompt for details.
 - `/grok:delegate grok upload file at ./report.pdf and summarize`
 - `/grok:delegate grok speak: welcome to the demo`
 - `/grok:delegate grok transcribe ./meeting.mp3`
 
-**File & Permission Notes (important for Claude to handle gracefully):**
-- When mentioning local files/folders (e.g. `./image.png`, `./video.mp4`, `./report.pdf`), use the exact paths. Grok runs in the workspace directory and inherits your shell permissions.
-- Read operations (vision, analyze image, describe): Usually safe. Grok will attempt to read the file.
-- Write/generation operations (edit image, generate video that saves output): The delegation is write-capable by default. Outputs will be saved relative to cwd; check the result text for saved paths.
-- Permission issues: If Grok hits "permission denied" or needs approval, it will be reported in the output. The main Claude session can then guide (e.g. suggest different path, run with different cwd, or handle via user approval on the initial delegation command).
-- Best practice (for Claude): Be explicit with paths in the request. High-level approvals happen on the `/grok:delegate` Bash invocation. Fine-grained file prompts/errors surface in the Grok output for you to resolve or rephrase.
-- For complex file work or to give Claude more direct control over permissions, use `--no-subagents`: `/grok:delegate --no-subagents grok analyze image at ./foo.png` or `/grok:delegate --no-subagents grok edit image at ./photo.jpg ...`
+**File paths & permissions (important)**
+- Always use the exact paths the user provides (e.g. `./photo.jpg`, `./report.pdf`).
+- Grok runs with your current shell permissions in the workspace directory.
+- Read-only tasks (vision, analyze, describe) are generally safe.
+- Generation/editing tasks use write mode by default. Generated files are saved in the workspace; the result will tell you the paths.
+- If Grok encounters permission problems, the error appears in the output. The main Claude thread can then suggest fixes or use `--no-subagents` for tighter control.
+- For complex file work, `--no-subagents` gives you (or Claude) direct oversight of the command.
 
-See the delegate agent prompt for how paths and permissions are preserved during forwarding.
+See the `grok:grok-delegate` agent prompt for the exact forwarding rules and permission guidance.
 
 ### `/grok:status`, `/grok:result`, `/grok:cancel`
 
@@ -347,7 +376,10 @@ When ready, `/grok:setup` also shows workspace defaults:
 
 - default model (`/grok:model` to change)
 - web search default (`/grok:web` to change; off by default)
+- reasoning effort default (`/grok:effort` to change)
 - hint for `/grok:delegate --no-subagents`
+
+Advanced Grok features (image/video generation, vision, file handling, etc.) are available through `/grok:delegate` with natural language. See the "Advanced Grok Features" section below.
 
 ---
 
@@ -448,7 +480,7 @@ Update the plugin:
 /reload-plugins
 ```
 
-Requires **v1.0.7** for `/grok:effort` and advanced features support (image/video, vision, file handling with permission guidance). Requires **v1.0.6** for `/grok:web`, `--no-subagents`, etc. `/grok:setup` can also run login on older cached installs.
+Requires **v1.0.7** for `/grok:effort` and advanced Grok features (image/video gen/edit, vision, file handling, etc.) via natural language in `/grok:delegate`. Requires **v1.0.6** for `/grok:web`, `--no-subagents`, etc. `/grok:setup` can also run login on older cached installs.
 
 ### `/grok:setup` says needs authentication
 

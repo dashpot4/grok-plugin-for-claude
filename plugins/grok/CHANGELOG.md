@@ -7,9 +7,33 @@
 - Natural language effort phrases (e.g. "grok max 모드로", "use maximum effort", "최대 effort") are now detected in delegate/review requests and converted to the proper `--effort` flag
 - `/grok:setup` now shows the reasoning effort default
 - Added `effort.mjs` and full wiring for defaults and per-run (including review path)
-- Advanced Grok features (generate/edit image, video, vision/analysis, file upload, brainstorm, search, code exec) supported via `/grok:delegate` with natural language detection and exact path preservation
-- Enhanced permission/file handling guidance in delegate prompts, agent, skill, setup, and README so Claude can manage OS/approval issues well
-- Updated README with Advanced Features section and examples from user capabilities list
+
+**Delegate answer retrieval**
+- `/grok:delegate` now returns Grok's answer **in-band by default** instead of silently backgrounding substantial tasks and forcing a `/grok:status` + `/grok:result` hunt every run
+- Removed the `grok-delegate` subagent heuristic that "preferred background execution" for complicated/open-ended/long-running tasks (the exact tasks people delegate), which contradicted the forwarder's contract to return `task` stdout verbatim and the `grok-cli-runtime` skill's "strip `--background` before `task`"
+- `--background` now consistently means "launch a detached Grok worker and retrieve later with `/grok:status` and `/grok:result`" — the escape hatch for runs over the Bash tool's ~10-minute limit — and is actually forwarded to `grok-companion task` on both the subagent and `--no-subagents` paths
+- The forwarder returns the companion's stdout even on a non-zero exit, so a completed answer is no longer dropped when Grok exits non-zero
+- Aligned `delegate.md`, the `grok-delegate` agent, the `grok-cli-runtime` / `grok-result-handling` skills, and README on one foreground-default / explicit-background model
+
+**Reliability**
+- New `SessionStart` hook (`session-lifecycle-hook.mjs`) stamps `GROK_COMPANION_SESSION_ID`, so `/grok:status`, `/grok:result`, `/grok:cancel`, and delegate resume are scoped to the Claude session that created the job instead of surfacing another session's work (completes a mechanism that was referenced but never wired)
+- Foreground progress is no longer written to stderr, so the delegate forwarder's returned answer is no longer interleaved with `[grok] …` progress lines (progress still appears in `/grok:status` via the job log)
+- Extracted `interpretGrokResult` with tests that lock the Grok `--output-format json` contract (`text` / `sessionId` / `stopReason`), guarding against a silent regression to the stderr fallback
+
+**Advanced Grok features**
+- Dedicated commands added for better discoverability:
+  - `/grok:image` — Generate images
+  - `/grok:edit-image` — Edit existing images
+  - `/grok:video` — Generate videos
+  - `/grok:edit-video` — Edit existing videos
+  - `/grok:vision` — Analyze/describe images with vision
+  - `/grok:tts` — Text-to-speech
+  - `/grok:stt` — Speech-to-text (transcribe)
+- Most Grok capabilities remain usable through `/grok:delegate` via natural language (both approaches work)
+- Natural language intent detection + exact file path preservation in delegate
+- Strong permission and file-access guidance added to `delegate.md`, `grok-delegate` agent, skill, `setup.md`, and README so Claude can handle workspace permissions and approvals gracefully
+- New "Advanced Grok Features" section in README with practical examples for both dedicated commands and natural language
+- `--no-subagents` recommended for complex file/multimodal work when more direct control is needed
 
 ## 1.0.6 — 2026-06-23
 

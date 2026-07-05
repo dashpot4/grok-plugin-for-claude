@@ -16,10 +16,10 @@ Execution mode:
 
 Subagent path (default):
 
-- If the request includes `--background`, run the `grok:grok-delegate` subagent in the background.
-- If the request includes `--wait`, run the `grok:grok-delegate` subagent in the foreground.
-- If neither flag is present, default to foreground.
-- `--background` and `--wait` are execution flags for Claude Code. Do not forward them to `task`, and do not treat them as part of the natural-language task text.
+- Always invoke the `grok:grok-delegate` subagent in the foreground (do not use the Agent tool's `run_in_background`). The subagent runs Grok and returns the answer, so the result is delivered to you in-band.
+- Default (and `--wait`): the subagent runs `grok-companion.mjs task` in the foreground and returns Grok's full answer. This is the right choice for almost every delegation. It is bounded by the Bash tool's ~10-minute limit; if a task is likely to run longer, use `--background`.
+- `--background`: the user is opting into a long-running or fire-and-forget run. The subagent forwards `--background` to `task`, which launches a detached worker and returns a job id immediately (not the answer). Surface that job id and tell the user to retrieve the result with `/grok:status <id>` and `/grok:result <id>`. `--background` survives arbitrarily long Grok runs.
+- `--wait` and `--background` are execution-mode flags — strip them from the natural-language task text. `--wait` is the default and is not passed to `task`; `--background` is passed through to `task`.
 - `--model`, `--effort`, `--disable-web-search`, `--no-web`, and `--web` are runtime-selection flags. Preserve them for the forwarded `task` call, but do not treat them as part of the natural-language task text. Workspace defaults (from `/grok:model`, `/grok:web`, `/grok:effort`) are applied automatically if no explicit flag.
 - Effort can also be requested in natural language. Scan the raw request for phrases indicating desired effort level and ensure the corresponding flag is present:
   - "grok max", "max mode", "max effort", "grok max 모드", "맥스", "최대 effort", "highest", "maximum" → `--effort max`
@@ -27,7 +27,8 @@ Subagent path (default):
   - "high effort", "높은 effort" → `--effort high`
   - Similar for medium/low.
   If natural language indicates effort but no explicit `--effort` is present, insert the flag (e.g. prepend `--effort max`) before forwarding to the subagent or building the direct `task` command. Prefer any explicit `--effort` over inferred.
-- Advanced Grok features (image/video generation, vision/analysis, file operations): Detect natural language requests for these and forward accurately:
+- Advanced Grok features: Dedicated commands exist for convenience (`/grok:image`, `/grok:edit-image`, `/grok:video`, `/grok:edit-video`, `/grok:vision`, `/grok:tts`, `/grok:stt`). 
+  You can still use natural language in this command. Detect common patterns and forward accurately:
   - Image: "generate image", "grok generate image", "create image of", "grok image"
   - Edit image: "edit image at PATH", "modify image", "grok edit image ./file.jpg to ..."
   - Analyze/vision: "analyze image at PATH", "grok vision", "describe image ./screenshot.png", "grok analyze image"
@@ -83,23 +84,20 @@ Direct companion flow (`--no-subagents`):
 - Map routing flags to companion args:
   - `--resume` → `--resume-last`
   - `--fresh` → omit `--resume-last`
-  - `--background` / `--wait` → Claude-side only; strip before `task`
+  - `--wait` → foreground (the default); strip it, do not pass to `task`
+  - `--background` → pass `--background` through to `task` so the companion launches a detached worker and returns a job id
   - `--model`, `--effort`, `--no-web`, `--web` → pass through to `task` (also inject from natural language effort requests as described in the general rules above)
 - Add `--write` unless the user explicitly asks for read-only behavior.
-- Foreground:
+- Foreground (default / `--wait`) — returns Grok's answer on stdout; present it verbatim:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task <flags and task text>
 ```
 
-- Background:
+- Background (`--background`) — the companion detaches its own worker and returns a job id immediately, so a normal foreground `Bash` call is enough (do not use `run_in_background`):
 
-```typescript
-Bash({
-  command: `node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task <flags and task text>`,
-  description: "Grok task",
-  run_in_background: true
-})
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task --background <other flags and task text>
 ```
 
-- Return the command stdout verbatim. For background, tell the user to check `/grok:status`.
+- Return the command stdout verbatim. For a `--background` run, surface the job id and tell the user to retrieve the answer with `/grok:status <id>` and `/grok:result <id>`.

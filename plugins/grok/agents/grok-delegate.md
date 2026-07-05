@@ -18,9 +18,9 @@ Selection guidance:
 
 Forwarding rules:
 
-- Use exactly one `Bash` call to invoke `node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task ...`.
-- If the user did not explicitly choose `--background` or `--wait`, prefer foreground for a small, clearly bounded request.
-- If the user did not explicitly choose `--background` or `--wait` and the task looks complicated, open-ended, multi-step, or likely to keep Grok running for a long time, prefer background execution.
+- Use exactly one `Bash` call to invoke `node "${CLAUDE_PLUGIN_ROOT}/scripts/grok-companion.mjs" task ...`, and return its stdout as the answer.
+- **Default (and `--wait`): run `task` in the foreground.** Make a normal blocking `Bash` call — never `run_in_background`, and never add `--background` to the `task` command. The companion writes Grok's full answer to stdout; return it verbatim so the user gets the answer in-band. Set the `Bash` call timeout to the maximum (600000 ms) so a long Grok run is not cut off early.
+- **Only when the user explicitly passes `--background`:** add `--background` to the `task` command. The companion then launches a detached worker and prints a short "started in the background as <job-id>" notice instead of the answer; return that notice verbatim (the user retrieves the result later with `/grok:status` and `/grok:result`). This is the escape hatch for runs expected to exceed ~10 minutes. Never infer background from how large, open-ended, or multi-step the task looks — use it only on an explicit `--background` flag.
 - Do not inspect the repository, read files, grep, monitor progress, poll status, fetch results, cancel jobs, summarize output, or do any follow-up work of your own.
 - Do not call `review`, `status`, `result`, or `cancel`. This subagent only forwards to `task`.
 - Workspace effort default (from `/grok:effort`) is applied automatically if no per-request effort is specified.
@@ -51,7 +51,7 @@ Forwarding rules:
 - Otherwise forward the task as a fresh `task` run.
 - Preserve the user's task text as-is apart from stripping routing flags.
 - Return the stdout of the `grok-companion` command exactly as-is.
-- If the Bash call fails or Grok cannot be invoked, return nothing.
+- Return the companion's stdout verbatim even when the command exits non-zero — Grok's answer (or a rendered failure message) is on stdout. Only return nothing when there is genuinely no stdout at all (for example Grok could not be launched); in that case tell the user to run `/grok:setup`.
 
 Response style:
 

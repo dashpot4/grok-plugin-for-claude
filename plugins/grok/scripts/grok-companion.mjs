@@ -405,9 +405,13 @@ function requireTaskRequest(prompt, resumeLast) {
 }
 
 async function runForegroundCommand(job, runner, options = {}) {
+  // Progress goes to the job log file (surfaced by /grok:status), not stderr:
+  // a foreground run blocks until completion, so stderr "[grok] ..." lines are
+  // never seen live and only merge into the stdout the delegate forwarder
+  // returns verbatim, corrupting Grok's answer.
   const { logFile, progress } = createTrackedProgress(job, {
     logFile: options.logFile,
-    stderr: !options.json
+    stderr: false
   });
   const execution = await runTrackedJob(job, () => runner(progress), { logFile });
   outputResult(options.json ? execution.payload : execution.rendered, options.json);

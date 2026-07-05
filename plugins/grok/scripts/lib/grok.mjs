@@ -154,6 +154,44 @@ export function buildGrokArgs(cwd, options = {}) {
   return args;
 }
 
+// Map a raw Grok CLI invocation (`--output-format json`) into the result shape
+// the companion consumes. Grok returns `{ text, sessionId, stopReason }`; the
+// answer lives in `text`. Kept as a pure, exported function so the schema
+// contract is locked by tests — a future CLI field rename that silently routes
+// the answer to the stderr fallback would then break a test instead of prod.
+export function interpretGrokResult({ stdout = "", stderr = "", status = 1 } = {}) {
+  let parsed = null;
+  let text = "";
+  let sessionId = null;
+  let stopReason = null;
+
+  if (String(stdout).trim()) {
+    try {
+      parsed = parseGrokJsonOutput(stdout);
+      text = parsed.text ?? "";
+      sessionId = parsed.sessionId ?? null;
+      stopReason = parsed.stopReason ?? null;
+    } catch {
+      text = String(stdout).trim();
+    }
+  }
+
+  const cleanStderr = String(stderr || "").trim();
+  const exitStatus = status ?? 1;
+
+  return {
+    status: exitStatus,
+    stdout,
+    stderr: cleanStderr,
+    finalMessage: text || cleanStderr,
+    sessionId,
+    stopReason,
+    parsed,
+    failureMessage:
+      exitStatus === 0 ? "" : cleanStderr || text || `Grok exited with status ${exitStatus}.`
+  };
+}
+
 export function runGrokTurn(cwd, options = {}) {
   let promptFile = options.promptFile ?? null;
   let cleanupPrompt = null;
@@ -177,41 +215,20 @@ export function runGrokTurn(cwd, options = {}) {
       throw result.error;
     }
 
-    let parsed = null;
-    let text = "";
-    let sessionId = null;
-    let stopReason = null;
-
-    if (result.stdout.trim()) {
-      try {
-        parsed = parseGrokJsonOutput(result.stdout);
-        text = parsed.text ?? "";
-        sessionId = parsed.sessionId ?? null;
-        stopReason = parsed.stopReason ?? null;
-      } catch {
-        text = result.stdout.trim();
-      }
-    }
-
-    const stderr = (result.stderr || "").trim();
-    const status = result.status ?? 1;
-
-    options.onProgress?.({
-      message: status === 0 ? "Grok finished." : `Grok failed with exit ${status}.`,
-      phase: status === 0 ? "done" : "failed",
-      sessionId
+    const interpreted = interpretGrokResult({
+      stdout: result.stdout,
+      stderr: result.stderr,
+      status: result.status
     });
 
-    return {
-      status,
-      stdout: result.stdout,
-      stderr,
-      finalMessage: text || stderr,
-      sessionId,
-      stopReason,
-      parsed,
-      failureMessage: status === 0 ? "" : stderr || text || `Grok exited with status ${status}.`
-    };
+    options.onProgress?.({
+      message:
+        interpreted.status === 0 ? "Grok finished." : `Grok failed with exit ${interpreted.status}.`,
+      phase: interpreted.status === 0 ? "done" : "failed",
+      sessionId: interpreted.sessionId
+    });
+
+    return interpreted;
   } finally {
     cleanupPrompt?.();
   }

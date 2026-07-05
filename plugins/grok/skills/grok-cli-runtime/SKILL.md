@@ -38,12 +38,13 @@ Execution rules:
 - Default to write-capable Grok work in `grok:grok-delegate` unless the user explicitly asks for read-only behavior.
 - Preserve the user's task text as-is apart from stripping routing flags.
 - Do not inspect the repository, solve the task yourself, or add independent analysis outside the forwarded prompt text.
-- Return the stdout of the `task` command exactly as-is.
-- If the Bash call fails or Grok cannot be invoked, return nothing.
+- Return the stdout of the `task` command exactly as-is — even on a non-zero exit, Grok's answer or a rendered failure message is on stdout.
+- Only return nothing when there is no stdout at all (for example Grok could not be launched); then point the user to `/grok:setup`.
 
 Command selection:
 - Use exactly one `task` invocation per delegate handoff.
-- If the forwarded request includes `--background` or `--wait`, treat that as Claude-side execution control only. Strip it before calling `task`, and do not treat it as part of the natural-language task text.
+- `--wait` is the default execution mode: run `task` in the foreground and return its stdout (Grok's answer) to the user in-band. Strip `--wait` from the task text and do not pass it to `task`.
+- `--background` is an explicit opt-in for long-running or fire-and-forget work: pass `--background` through to `task` so the companion launches a detached worker and returns a job id (the user retrieves the answer later via `/grok:status` and `/grok:result`). Strip `--background` from the natural-language task text but DO pass the flag to `task`. Never add `--background` yourself based on task size, open-endedness, or complexity — only when the user explicitly requested it.
 - If the forwarded request includes `--model`, pass it through to `task`.
 - If the (forwarded or natural-language) request indicates a specific effort level, include `--effort <level>` in the `task` command.
 - Web search is disabled by default. Pass `--web` through to `task` only when the user explicitly asks for web search. Pass `--no-web` when the user asks to force-disable web search for this run. Strip these flags from the natural-language task text.
