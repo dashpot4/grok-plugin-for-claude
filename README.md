@@ -36,14 +36,6 @@ Full release history: [plugins/grok/CHANGELOG.md](plugins/grok/CHANGELOG.md)
 
 You also get the `grok:grok-delegate` subagent in `/agents`.
 
-**For better search visibility (Google, GitHub, Claude marketplace):**
-- GitHub repo **Description** (가장 중요): "Grok Build CLI plugin for Claude Code — claude grok, grok claude code, image generation, vision, delegate, review"
-- GitHub **Topics**: claude-code, claude, grok, xai, claude-plugin, ai, grok-build
-- README 첫 문단에 자연스럽게 키워드: claude code grok, grok claude code plugin, use grok in claude code
-- marketplace.json description도 키워드 포함
-
-(검색 엔진은 주로 README 상단 + GitHub 메타데이터를 봅니다)
-
 ## Requirements
 
 - **Grok Build CLI** with an active login
