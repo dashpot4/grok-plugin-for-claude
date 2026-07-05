@@ -1,12 +1,6 @@
 # Changelog
 
-## 1.0.7 — 2026-06-23
-
-- Add `/grok:effort` command to view or change workspace default reasoning effort (`low`/`medium`/`high`/`xhigh`/`max` or `none`)
-- Workspace default effort is automatically applied to `/grok:delegate` and `/grok:review` (per-run `--effort` or natural language overrides it)
-- Natural language effort phrases (e.g. "grok max 모드로", "use maximum effort", "최대 effort") are now detected in delegate/review requests and converted to the proper `--effort` flag
-- `/grok:setup` now shows the reasoning effort default
-- Added `effort.mjs` and full wiring for defaults and per-run (including review path)
+## 1.0.8 — 2026-07-06
 
 **Delegate answer retrieval**
 - `/grok:delegate` now returns Grok's answer **in-band by default** instead of silently backgrounding substantial tasks and forcing a `/grok:status` + `/grok:result` hunt every run
@@ -19,6 +13,14 @@
 - New `SessionStart` hook (`session-lifecycle-hook.mjs`) stamps `GROK_COMPANION_SESSION_ID`, so `/grok:status`, `/grok:result`, `/grok:cancel`, and delegate resume are scoped to the Claude session that created the job instead of surfacing another session's work (completes a mechanism that was referenced but never wired)
 - Foreground progress is no longer written to stderr, so the delegate forwarder's returned answer is no longer interleaved with `[grok] …` progress lines (progress still appears in `/grok:status` via the job log)
 - Extracted `interpretGrokResult` with tests that lock the Grok `--output-format json` contract (`text` / `sessionId` / `stopReason`), guarding against a silent regression to the stderr fallback
+
+## 1.0.7 — 2026-06-23
+
+- Add `/grok:effort` command to view or change workspace default reasoning effort (`low`/`medium`/`high`/`xhigh`/`max` or `none`)
+- Workspace default effort is automatically applied to `/grok:delegate` and `/grok:review` (per-run `--effort` or natural language overrides it)
+- Natural language effort phrases (e.g. "grok max 모드로", "use maximum effort", "최대 effort") are now detected in delegate/review requests and converted to the proper `--effort` flag
+- `/grok:setup` now shows the reasoning effort default
+- Added `effort.mjs` and full wiring for defaults and per-run (including review path)
 
 **Advanced Grok features**
 - Dedicated commands added for better discoverability:
