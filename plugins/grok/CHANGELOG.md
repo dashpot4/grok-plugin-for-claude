@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.9 — 2026-07-10
+
+**Model selection follows the Grok Build CLI default (Grok 4.5)**
+- The plugin no longer pins a hardcoded default model. When no workspace model is saved it passes **no `-m`** and lets the Grok Build CLI choose its own default — currently **`grok-4.5`** (default since 2026-07-08) — so future xAI default changes are followed automatically instead of pinning an older model
+- Updated the `/grok:model` catalog to the current CLI models (**`grok-4.5`**, `grok-composer-2.5-fast`) and **removed `grok-build`** — it is no longer a valid CLI model (`-m grok-build` now errors `unknown model id`, verified against the `grok` binary)
+- Added `/grok:model none` (also `clear` / `default` / `auto`) to clear a saved model and return to the CLI default
+- Per-run `--model` values are now alias-normalized (`--model composer` → `grok-composer-2.5-fast`, `--model 4.5` → `grok-4.5`)
+- `/grok:model` and `/grok:setup` now show the effective Grok CLI default and no longer print a stale hardcoded "plugin default"
+- Docs: `grok resume <id>` → `grok --resume <id>` (resume is the `-r`/`--resume` flag, not a subcommand). Flag and `--output-format json` contract (`text` / `sessionId` / `stopReason`) verified unchanged against the installed `grok` binary
+
 ## 1.0.8 — 2026-07-06
 
 **Delegate answer retrieval**

@@ -1,6 +1,6 @@
 # Grok Plugin for Claude Code | Use Grok in Claude Code
 
-**Current version: 1.0.8**
+**Current version: 1.0.9**
 
 Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code. 
 
@@ -76,6 +76,7 @@ Update to the latest release:
 
 | Version | Highlights |
 |---------|------------|
+| **1.0.9** | Model selection now **follows the Grok Build CLI default** — no workspace model set means no `-m`, so runs use the CLI's own default (**`grok-4.5`** since 2026-07-08) and auto-follow future changes. `/grok:model` catalog updated (grok-4.5 + composer; **`grok-build` removed** — CLI rejects it); added `/grok:model none` to clear; `--model` aliases normalized. Docs: `grok resume` → `grok --resume` |
 | **1.0.8** | `/grok:delegate` returns Grok's answer **in-band by default** (no `/grok:status` + `/grok:result` hunt); `--background` reliably detaches for runs over the Bash ~10-minute limit; jobs are scoped to the Claude session (`GROK_COMPANION_SESSION_ID`); `interpretGrokResult` locks the `--output-format json` contract (`text` / `sessionId` / `stopReason`) with tests |
 | **1.0.7** | `/grok:effort` + full advanced Grok feature support (image/video generation & editing, vision/analysis, file upload, brainstorm, search, code execution, TTS, etc.) via `/grok:delegate` with natural language detection, exact path handling, and permission guidance |
 | **1.0.6** | `--no-subagents` direct delegate; `/grok:web`; web search off by default (`--web` to enable); setup shows workspace settings; CI |
@@ -210,15 +211,16 @@ The plugin runtime itself resolves `~/.grok/bin/grok.exe` directly, so `/grok:de
 
 ### `/grok:model`
 
-Pick the default Grok model for this workspace. The plugin's built-in default is `grok-composer-2.5-fast`.
+Pick the default Grok model for this workspace. By default the plugin saves **no** model and follows the Grok Build CLI's own default — **`grok-4.5`** as of 2026-07 (`grok models` shows `* grok-4.5 (default)`).
 
 ```text
 /grok:model
-/grok:model grok-build
+/grok:model grok-4.5
 /grok:model composer
+/grok:model none
 ```
 
-> **Grok model note (2026-07):** The Grok Build CLI's own default model moved to **`grok-4.5`** on 2026-07-08 (verify with `grok models` — you'll see `* grok-4.5 (default)`). `grok-composer-2.5-fast` is still selectable but is no longer the CLI default. This plugin still applies `grok-composer-2.5-fast` as its built-in default, so to run Grok 4.5 for a task pass `--model grok-4.5` (e.g. `/grok:delegate --model grok-4.5 investigate the flaky test`). No flags or output format changed with 4.5 — only the default model id.
+> **Grok model note (v1.0.9, 2026-07):** As of 2026-07-08 the Grok Build CLI's default model is **`grok-4.5`**. This plugin no longer pins an older model — when no workspace model is saved it passes no `-m` and follows the CLI default, so future xAI default changes are picked up automatically. Use `/grok:model <id>` to pin one (e.g. `grok-4.5`, `composer`) or `/grok:model none` to clear it and return to the CLI default. **`grok-build` was removed upstream** and is no longer selectable (`-m grok-build` errors `unknown model id`). Flags and the `--output-format json` contract are unchanged.
 
 Runs instantly (no Claude orchestration). `/grok:delegate` and `/grok:review` use the saved model unless you pass `--model`.
 
@@ -424,7 +426,7 @@ Use `--web` only when you explicitly want Grok to search the web.
 
 ```text
 /grok:model
-/grok:model grok-build
+/grok:model grok-4.5
 /grok:web
 /grok:web on
 ```

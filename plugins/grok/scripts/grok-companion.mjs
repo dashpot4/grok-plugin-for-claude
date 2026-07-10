@@ -47,6 +47,7 @@ import {
   PLUGIN_MODEL_CONFIG_KEY,
   resolvePluginModel,
   validateModelSelection,
+  isModelClearValue,
   listGrokModels
 } from "./lib/model.mjs";
 import {
@@ -768,6 +769,18 @@ function handleModel(argv) {
 
   const availability = listGrokModels({ refresh });
   const requestedModel = options.set ?? (positionals.join(" ").trim() || null);
+
+  if (requestedModel && isModelClearValue(requestedModel)) {
+    setConfig(workspaceRoot, PLUGIN_MODEL_CONFIG_KEY, "");
+    const snapshot = buildModelSnapshot(workspaceRoot, { models: availability });
+    const payload = {
+      action: "clear",
+      changed: true,
+      ...snapshot
+    };
+    outputCommandResult(payload, renderModelReport(payload), options.json);
+    return;
+  }
 
   if (requestedModel) {
     const selectedModel = validateModelSelection(requestedModel, availability.models);

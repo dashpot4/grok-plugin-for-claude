@@ -2,26 +2,46 @@ import { resolveGrokCommand } from "./grok.mjs";
 import { runCommand } from "./process.mjs";
 import { getConfig } from "./state.mjs";
 
-export const PLUGIN_DEFAULT_MODEL = "grok-composer-2.5-fast";
+// No hardcoded plugin default: when the workspace has no saved model, the plugin
+// passes no `-m` and lets the Grok Build CLI pick its own default (grok-4.5 as of
+// 2026-07). This auto-follows future xAI default changes instead of pinning an
+// older model. Kept exported (as null) for back-compat with importers.
+export const PLUGIN_DEFAULT_MODEL = null;
 export const PLUGIN_MODEL_CONFIG_KEY = "defaultModel";
 
+// Informational only: the model the Grok Build CLI falls back to when none is
+// passed. Shown in `/grok:model` and `/grok:setup`; never forced via `-m`.
+export const CLI_DEFAULT_MODEL_HINT = "grok-4.5";
+
 const MODEL_LABELS = {
-  "grok-composer-2.5-fast": "Composer 2.5 Fast",
-  "grok-build": "Grok Build"
+  "grok-4.5": "Grok 4.5",
+  "grok-composer-2.5-fast": "Composer 2.5 Fast"
 };
 
+// Models offered by `/grok:model` without a live `grok models` refresh. Mirrors
+// the current Grok Build CLI catalog. `grok-build` was removed upstream — the CLI
+// now rejects `-m grok-build` with "unknown model id" — so it is no longer listed.
+// A live `--refresh` still overrides this list from the CLI.
 export const KNOWN_MODELS = [
-  { id: "grok-composer-2.5-fast", label: "Composer 2.5 Fast" },
-  { id: "grok-build", label: "Grok Build" }
+  { id: "grok-4.5", label: "Grok 4.5" },
+  { id: "grok-composer-2.5-fast", label: "Composer 2.5 Fast" }
 ];
 
 const MODEL_ALIASES = {
+  "4.5": "grok-4.5",
+  "grok4.5": "grok-4.5",
+  "grok-4.5": "grok-4.5",
   composer: "grok-composer-2.5-fast",
   "composer-2.5-fast": "grok-composer-2.5-fast",
-  "grok-composer": "grok-composer-2.5-fast",
-  build: "grok-build",
-  "grok-build": "grok-build"
+  "grok-composer": "grok-composer-2.5-fast"
 };
+
+// Values that mean "clear the saved workspace model → follow the Grok CLI default".
+const MODEL_CLEAR_VALUES = new Set(["none", "clear", "default", "unset", "cli", "auto"]);
+
+export function isModelClearValue(value) {
+  return MODEL_CLEAR_VALUES.has(String(value ?? "").trim().toLowerCase());
+}
 
 export function formatModelLabel(modelId) {
   return MODEL_LABELS[modelId] ?? modelId;
@@ -36,11 +56,12 @@ export function normalizeModelId(modelId) {
 }
 
 export function getKnownModelsCatalog(cliDefault = null) {
+  const effectiveDefault = cliDefault ?? CLI_DEFAULT_MODEL_HINT;
   return {
     cliDefault,
     models: KNOWN_MODELS.map((model) => ({
       ...model,
-      isCliDefault: model.id === (cliDefault ?? PLUGIN_DEFAULT_MODEL)
+      isCliDefault: model.id === effectiveDefault
     }))
   };
 }
@@ -107,11 +128,12 @@ export function getPluginModelConfig(workspaceRoot) {
 }
 
 export function resolvePluginModel(workspaceRoot, explicitModel = null) {
-  const normalizedExplicit = explicitModel == null ? null : String(explicitModel).trim();
-  if (normalizedExplicit) {
-    return normalizedExplicit;
+  const trimmedExplicit = explicitModel == null ? "" : String(explicitModel).trim();
+  if (trimmedExplicit) {
+    return normalizeModelId(trimmedExplicit);
   }
 
+  // No explicit model and no workspace override → null, so the CLI uses its default.
   return getPluginModelConfig(workspaceRoot) ?? PLUGIN_DEFAULT_MODEL;
 }
 
@@ -132,17 +154,23 @@ export function buildModelChoices(models, selectedModel) {
 export function buildModelSnapshot(workspaceRoot, options = {}) {
   const availability = options.models ?? listGrokModels();
   const selectedModel = resolvePluginModel(workspaceRoot, options.explicitModel ?? null);
+  const usingCliDefault = selectedModel == null;
   const availableIds = new Set(availability.models.map((model) => model.id));
+  const effectiveCliDefault = availability.cliDefault ?? CLI_DEFAULT_MODEL_HINT;
   const choices = buildModelChoices(availability.models, selectedModel);
 
   return {
     selectedModel,
-    selectedLabel: formatModelLabel(selectedModel),
+    usingCliDefault,
+    selectedLabel: usingCliDefault
+      ? `Grok CLI default (${formatModelLabel(effectiveCliDefault)})`
+      : formatModelLabel(selectedModel),
     pluginDefault: PLUGIN_DEFAULT_MODEL,
-    cliDefault: availability.cliDefault,
+    cliDefault: effectiveCliDefault,
+    cliDefaultHint: CLI_DEFAULT_MODEL_HINT,
     models: availability.models,
     choices,
-    isValidSelection: availableIds.size === 0 || availableIds.has(selectedModel)
+    isValidSelection: usingCliDefault || availableIds.size === 0 || availableIds.has(selectedModel)
   };
 }
 

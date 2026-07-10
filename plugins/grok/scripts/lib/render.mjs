@@ -129,20 +129,24 @@ export function renderEffortReport(report) {
 }
 
 export function renderModelReport(report) {
-  const lines = [
-    "# Grok Model",
-    "",
-    `Selected: ${report.selectedLabel} (\`${report.selectedModel}\`)`,
-    `Plugin default: ${formatModelLabel(report.pluginDefault)}`,
-    ""
-  ];
+  const lines = ["# Grok Model", ""];
+
+  if (report.usingCliDefault) {
+    lines.push(`Selected: ${report.selectedLabel}`);
+  } else {
+    lines.push(`Selected: ${report.selectedLabel} (\`${report.selectedModel}\`)`);
+  }
+  lines.push("");
 
   if (report.cliDefault) {
     lines.push(`Grok CLI default: \`${report.cliDefault}\``);
     lines.push("");
   }
 
-  if (report.changed) {
+  if (report.action === "clear") {
+    lines.push(`Cleared. \`/grok:delegate\` and \`/grok:review\` now follow the Grok CLI default (\`${report.cliDefault}\`) unless you pass \`--model\`.`);
+    lines.push("");
+  } else if (report.changed) {
     lines.push("Saved for this workspace. Future `/grok:delegate` and `/grok:review` runs will use this model unless you pass `--model`.");
     lines.push("");
   } else if (report.action === "show") {
@@ -152,7 +156,7 @@ export function renderModelReport(report) {
       lines.push(`${marker} ${choice.label} (\`${choice.id}\`)`);
     }
     lines.push("");
-    lines.push("Change model: `/grok:model grok-build` or `/grok:model composer`");
+    lines.push("Change model: `/grok:model grok-4.5` or `/grok:model composer` (or `/grok:model none` to follow the CLI default)");
     lines.push("");
   }
 
@@ -214,13 +218,16 @@ export function renderSetupReport(report) {
   }
 
   if (report.workspace) {
+    const model = report.workspace.model;
     lines.push("Workspace settings:");
     lines.push(
-      `- Default model: ${report.workspace.model.selectedLabel} (\`${report.workspace.model.selectedModel}\`)`
+      model.usingCliDefault
+        ? `- Default model: ${model.selectedLabel}`
+        : `- Default model: ${model.selectedLabel} (\`${model.selectedModel}\`)`
     );
     lines.push(`- Web search: ${report.workspace.web.label}`);
     lines.push(`- Reasoning effort: ${report.workspace.effort?.label ?? "not set"}`);
-    lines.push("- Change model: `/grok:model grok-build` or `/grok:model composer`");
+    lines.push("- Change model: `/grok:model grok-4.5` or `/grok:model composer`");
     lines.push("- Change web default: `/grok:web on` or `/grok:web off`");
     lines.push("- Change effort default: `/grok:effort high` (or none to clear)");
     lines.push("- Skip delegate subagent: `/grok:delegate --no-subagents ...`");
