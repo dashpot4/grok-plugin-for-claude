@@ -9,7 +9,7 @@ const AUTH_FILE = path.join(os.homedir(), ".grok", "auth.json");
 const DEFAULT_GROK_BIN_DIR = path.join(os.homedir(), ".grok", "bin");
 export const DEFAULT_CONTINUE_PROMPT = "Continue from where you left off.";
 export const DEFAULT_MAX_TURNS = 50;
-const VALID_EFFORTS = new Set(["low", "medium", "high", "xhigh", "max"]);
+const VALID_EFFORTS = new Set(["low", "medium", "high", "xhigh"]);
 
 function defaultGrokBinaryCandidates() {
   const binaryName = process.platform === "win32" ? "grok.exe" : "grok";
@@ -81,7 +81,7 @@ export function normalizeEffort(effort) {
     return null;
   }
   if (!VALID_EFFORTS.has(normalized)) {
-    throw new Error(`Unsupported effort "${effort}". Use one of: low, medium, high, xhigh, max.`);
+    throw new Error(`Unsupported effort "${effort}". Use one of: low, medium, high, xhigh.`);
   }
   return normalized;
 }
@@ -117,7 +117,9 @@ export function preparePromptFile(prompt) {
 }
 
 export function buildGrokArgs(cwd, options = {}) {
-  const args = [];
+  // Headless integrations should not mutate the CLI while a task is running.
+  // Supported by Grok Build CLI 1.0.13+ and recommended by the official docs.
+  const args = ["--no-auto-update"];
 
   if (options.promptFile) {
     args.push("--prompt-file", options.promptFile);

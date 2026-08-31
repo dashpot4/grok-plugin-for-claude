@@ -19,30 +19,31 @@ import { renderModelReport } from "../plugins/grok/scripts/lib/render.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const COMPANION = path.join(ROOT, "plugins", "grok", "scripts", "grok-companion.mjs");
 
-// Mirrors the real Grok Build CLI `grok models` output (grok-4.5 default since 2026-07-08).
+// Mirrors Grok Build CLI 1.0.13 `grok models` output (verified 2026-09-01).
 const SAMPLE_MODELS_OUTPUT = `
 You are logged in with grok.com.
 
-Default model: grok-4.5
+Default model: grok-4.6
 
 Available models:
-  * grok-4.5 (default)
-  - grok-composer-2.5-fast
+  * grok-4.6 (default)
+  - grok-4.5
 `.trim();
 
 test("parseGrokModelsOutput extracts CLI default and model ids", () => {
   const parsed = parseGrokModelsOutput(SAMPLE_MODELS_OUTPUT);
 
-  assert.equal(parsed.cliDefault, "grok-4.5");
+  assert.equal(parsed.cliDefault, "grok-4.6");
   assert.deepEqual(
     parsed.models.map((model) => model.id),
-    ["grok-4.5", "grok-composer-2.5-fast"]
+    ["grok-4.6", "grok-4.5"]
   );
   assert.equal(parsed.models[0].isCliDefault, true);
 });
 
 test("normalizeModelId resolves short aliases", () => {
-  assert.equal(normalizeModelId("composer"), "grok-composer-2.5-fast");
+  assert.equal(normalizeModelId("4.6"), "grok-4.6");
+  assert.equal(normalizeModelId("grok4.6"), "grok-4.6");
   assert.equal(normalizeModelId("4.5"), "grok-4.5");
   assert.equal(normalizeModelId("grok-4.5"), "grok-4.5");
 });
@@ -55,7 +56,7 @@ test("getKnownModelsCatalog avoids grok models subprocess and marks the CLI defa
 });
 
 test("resolvePluginModel normalizes explicit models and falls back to null (CLI default)", () => {
-  assert.equal(resolvePluginModel("/tmp", "composer"), "grok-composer-2.5-fast");
+  assert.equal(resolvePluginModel("/tmp", "4.6"), "grok-4.6");
   assert.equal(resolvePluginModel("/tmp", "grok-4.5"), "grok-4.5");
   // No explicit model and no workspace override → null so the CLI picks its own default.
   assert.equal(resolvePluginModel("/tmp", null), PLUGIN_DEFAULT_MODEL);
@@ -67,16 +68,16 @@ test("isModelClearValue recognizes clear tokens only", () => {
   assert.equal(isModelClearValue("clear"), true);
   assert.equal(isModelClearValue("auto"), true);
   assert.equal(isModelClearValue("grok-4.5"), false);
-  assert.equal(isModelClearValue("composer"), false);
+  assert.equal(isModelClearValue("grok-4.6"), false);
 });
 
 test("buildModelChoices marks the current selection", () => {
   const choices = buildModelChoices(
     [
-      { id: "grok-4.5", label: "Grok 4.5", isCliDefault: true },
-      { id: "grok-composer-2.5-fast", label: "Composer 2.5 Fast", isCliDefault: false }
+      { id: "grok-4.6", label: "Grok 4.6", isCliDefault: true },
+      { id: "grok-4.5", label: "Grok 4.5", isCliDefault: false }
     ],
-    "grok-composer-2.5-fast"
+    "grok-4.5"
   );
 
   assert.equal(choices[1].isSelected, true);
@@ -89,20 +90,20 @@ test("renderModelReport lists available models and the CLI-default hint", () => 
     changed: false,
     usingCliDefault: true,
     selectedModel: null,
-    selectedLabel: "Grok CLI default (Grok 4.5)",
-    cliDefault: "grok-4.5",
+    selectedLabel: "Grok CLI default (Grok 4.6)",
+    cliDefault: "grok-4.6",
     choices: buildModelChoices(
       [
-        { id: "grok-4.5", label: "Grok 4.5", isCliDefault: true },
-        { id: "grok-composer-2.5-fast", label: "Composer 2.5 Fast", isCliDefault: false }
+        { id: "grok-4.6", label: "Grok 4.6", isCliDefault: true },
+        { id: "grok-4.5", label: "Grok 4.5", isCliDefault: false }
       ],
       null
     ),
     isValidSelection: true
   });
 
+  assert.match(rendered, /Grok 4\.6/);
   assert.match(rendered, /Grok 4\.5/);
-  assert.match(rendered, /Composer 2\.5 Fast/);
   assert.match(rendered, /follow the CLI default/);
 });
 
@@ -112,14 +113,14 @@ test("renderModelReport describes a cleared workspace model", () => {
     changed: true,
     usingCliDefault: true,
     selectedModel: null,
-    selectedLabel: "Grok CLI default (Grok 4.5)",
-    cliDefault: "grok-4.5",
+    selectedLabel: "Grok CLI default (Grok 4.6)",
+    cliDefault: "grok-4.6",
     choices: [],
     isValidSelection: true
   });
 
   assert.match(rendered, /Cleared/);
-  assert.match(rendered, /grok-4\.5/);
+  assert.match(rendered, /grok-4\.6/);
 });
 
 test("grok-companion model exits successfully", () => {

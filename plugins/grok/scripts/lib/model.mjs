@@ -3,37 +3,37 @@ import { runCommand } from "./process.mjs";
 import { getConfig } from "./state.mjs";
 
 // No hardcoded plugin default: when the workspace has no saved model, the plugin
-// passes no `-m` and lets the Grok Build CLI pick its own default (grok-4.5 as of
-// 2026-07). This auto-follows future xAI default changes instead of pinning an
+// passes no `-m` and lets the Grok Build CLI pick its own default (grok-4.6 as of
+// 2026-09). This auto-follows future xAI default changes instead of pinning an
 // older model. Kept exported (as null) for back-compat with importers.
 export const PLUGIN_DEFAULT_MODEL = null;
 export const PLUGIN_MODEL_CONFIG_KEY = "defaultModel";
 
 // Informational only: the model the Grok Build CLI falls back to when none is
 // passed. Shown in `/grok:model` and `/grok:setup`; never forced via `-m`.
-export const CLI_DEFAULT_MODEL_HINT = "grok-4.5";
+export const CLI_DEFAULT_MODEL_HINT = "grok-4.6";
 
 const MODEL_LABELS = {
-  "grok-4.5": "Grok 4.5",
-  "grok-composer-2.5-fast": "Composer 2.5 Fast"
+  "grok-4.6": "Grok 4.6",
+  "grok-4.5": "Grok 4.5"
 };
 
 // Models offered by `/grok:model` without a live `grok models` refresh. Mirrors
-// the current Grok Build CLI catalog. `grok-build` was removed upstream — the CLI
-// now rejects `-m grok-build` with "unknown model id" — so it is no longer listed.
+// the current Grok Build CLI catalog. Removed upstream models are intentionally
+// omitted so the instant (non-refresh) path does not offer invalid selections.
 // A live `--refresh` still overrides this list from the CLI.
 export const KNOWN_MODELS = [
-  { id: "grok-4.5", label: "Grok 4.5" },
-  { id: "grok-composer-2.5-fast", label: "Composer 2.5 Fast" }
+  { id: "grok-4.6", label: "Grok 4.6" },
+  { id: "grok-4.5", label: "Grok 4.5" }
 ];
 
 const MODEL_ALIASES = {
+  "4.6": "grok-4.6",
+  "grok4.6": "grok-4.6",
+  "grok-4.6": "grok-4.6",
   "4.5": "grok-4.5",
   "grok4.5": "grok-4.5",
-  "grok-4.5": "grok-4.5",
-  composer: "grok-composer-2.5-fast",
-  "composer-2.5-fast": "grok-composer-2.5-fast",
-  "grok-composer": "grok-composer-2.5-fast"
+  "grok-4.5": "grok-4.5"
 };
 
 // Values that mean "clear the saved workspace model → follow the Grok CLI default".

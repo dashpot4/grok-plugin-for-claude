@@ -24,6 +24,8 @@ test("parseArgs handles value and boolean flags", () => {
 
 test("normalizeEffort accepts supported values", () => {
   assert.equal(normalizeEffort("high"), "high");
+  assert.equal(normalizeEffort("xhigh"), "xhigh");
+  assert.throws(() => normalizeEffort("max"));
   assert.throws(() => normalizeEffort("turbo"));
 });
 
@@ -50,8 +52,8 @@ test("renderSetupReport shows workspace settings when present", () => {
     sessionRuntime: { ready: true, label: "ready" },
     workspace: {
       model: {
-        selectedModel: "grok-composer-2.5-fast",
-        selectedLabel: "Composer 2.5 Fast"
+        selectedModel: "grok-4.6",
+        selectedLabel: "Grok 4.6"
       },
       web: {
         label: "disabled by default"
@@ -61,7 +63,7 @@ test("renderSetupReport shows workspace settings when present", () => {
   });
 
   assert.match(rendered, /Workspace settings/);
-  assert.match(rendered, /Composer 2.5 Fast/);
+  assert.match(rendered, /Grok 4.6/);
   assert.match(rendered, /disabled by default/);
   assert.match(rendered, /--no-subagents/);
 });

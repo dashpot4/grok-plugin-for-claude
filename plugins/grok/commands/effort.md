@@ -1,6 +1,6 @@
 ---
 description: View or change the default Grok reasoning effort for this workspace
-argument-hint: "[low|medium|high|xhigh|max|none|clear]"
+argument-hint: "[low|medium|high|xhigh|none|clear]"
 disable-model-invocation: true
 allowed-tools: Bash(node:*)
 ---

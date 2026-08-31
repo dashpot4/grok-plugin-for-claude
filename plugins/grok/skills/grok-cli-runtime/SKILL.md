@@ -18,7 +18,7 @@ Execution rules:
 - Use `task` for every delegate request, including diagnosis, planning, research, and explicit fix requests.
 - Workspace effort default (from `/grok:effort`) applies automatically unless overridden here.
 - Detect effort requests from the user's request text (both explicit flags and natural language) to override. Map phrases such as:
-  - "max", "maximum", "grok max", "max mode", "max effort", "맥스", "grok max 모드", "최대", "highest", "maximum effort" → `--effort max`
+  - "max", "maximum", "grok max", "max mode", "max effort", "맥스", "grok max 모드", "최대", "highest", "maximum effort" → `--effort xhigh`
   - "xhigh", "extra high", "x-high", "매우 높음" → `--effort xhigh`
   - "high", "높음", "high effort" → `--effort high`
   - "medium", "중간", "보통" → `--effort medium`
@@ -50,5 +50,5 @@ Command selection:
 - Web search is disabled by default. Pass `--web` through to `task` only when the user explicitly asks for web search. Pass `--no-web` when the user asks to force-disable web search for this run. Strip these flags from the natural-language task text.
 - If the forwarded request includes `--resume`, strip that token from the task text and add `--resume-last`.
 - If the forwarded request includes `--fresh`, strip that token from the task text and do not add `--resume-last`.
-- `--effort`: accepted values are `low`, `medium`, `high`, `xhigh`, `max`.
+- `--effort`: accepted values are `low`, `medium`, `high`, `xhigh`. Natural-language requests for maximum effort map to `xhigh`.
 - `task --resume-last`: internal helper for follow-up instructions after a previous delegate run.

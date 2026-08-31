@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.10 — 2026-09-01
+
+**Grok 4.6 / Grok Build CLI 1.0.13 compatibility**
+- Updated the built-in `/grok:model` catalog to the current CLI output: **`grok-4.6`** (default) and `grok-4.5`
+- Added `4.6` / `grok4.6` aliases and removed the unavailable `grok-composer-2.5-fast` choice and aliases
+- Kept the unpinned default behavior, so workspaces without a saved model continue to follow future Grok CLI defaults automatically
+- Aligned reasoning effort with Grok 4.6 (`low`, `medium`, `high`, `xhigh`); natural-language maximum-effort requests now map to `xhigh`, while the unsupported `max` value is rejected
+- Added `--no-auto-update` to headless task invocations, preventing the Grok CLI from changing itself during a plugin run as recommended by the official scripting guide
+- Verified against Grok Build CLI 1.0.13: latest-version check, live model list, headless flags, and JSON result fields (`text`, `sessionId`, `stopReason`)
+- Updated README, command hints, agent/skill guidance, runtime output, manifests, and regression tests
+
 ## 1.0.9 — 2026-07-10
 
 **Model selection follows the Grok Build CLI default (Grok 4.5)**

@@ -1,6 +1,6 @@
 # Grok Plugin for Claude Code | Use Grok in Claude Code
 
-**Current version: 1.0.9**
+**Current version: 1.0.10**
 
 Use [Grok Build CLI](https://x.ai/cli) from inside Claude Code. 
 
@@ -38,7 +38,7 @@ You also get the `grok:grok-delegate` subagent in `/agents`.
 
 ## Requirements
 
-- **Grok Build CLI** with an active login
+- **Grok Build CLI 1.0.13+** with an active login
 - **Node.js 18.18+** (used by the plugin runtime scripts)
 - **Git** (recommended for `/grok:review`)
 
@@ -76,6 +76,7 @@ Update to the latest release:
 
 | Version | Highlights |
 |---------|------------|
+| **1.0.10** | Updated for **Grok 4.6** and Grok Build CLI 1.0.13: the instant model catalog now matches `grok models` (`grok-4.6` default + `grok-4.5`), removed the retired Composer choice, maps natural-language maximum effort to supported `xhigh`, and disables background CLI self-updates during headless plugin runs. |
 | **1.0.9** | Model selection now **follows the Grok Build CLI default** — no workspace model set means no `-m`, so runs use the CLI's own default (**`grok-4.5`** since 2026-07-08) and auto-follow future changes. `/grok:model` catalog updated (grok-4.5 + composer; **`grok-build` removed** — CLI rejects it); added `/grok:model none` to clear; `--model` aliases normalized. Docs: `grok resume` → `grok --resume` |
 | **1.0.8** | `/grok:delegate` returns Grok's answer **in-band by default** (no `/grok:status` + `/grok:result` hunt); `--background` reliably detaches for runs over the Bash ~10-minute limit; jobs are scoped to the Claude session (`GROK_COMPANION_SESSION_ID`); `interpretGrokResult` locks the `--output-format json` contract (`text` / `sessionId` / `stopReason`) with tests |
 | **1.0.7** | `/grok:effort` + full advanced Grok feature support (image/video generation & editing, vision/analysis, file upload, brainstorm, search, code execution, TTS, etc.) via `/grok:delegate` with natural language detection, exact path handling, and permission guidance |
@@ -211,16 +212,16 @@ The plugin runtime itself resolves `~/.grok/bin/grok.exe` directly, so `/grok:de
 
 ### `/grok:model`
 
-Pick the default Grok model for this workspace. By default the plugin saves **no** model and follows the Grok Build CLI's own default — **`grok-4.5`** as of 2026-07 (`grok models` shows `* grok-4.5 (default)`).
+Pick the default Grok model for this workspace. By default the plugin saves **no** model and follows the Grok Build CLI's own default — **`grok-4.6`** as of 2026-09 (`grok models` shows `* grok-4.6 (default)`).
 
 ```text
 /grok:model
+/grok:model grok-4.6
 /grok:model grok-4.5
-/grok:model composer
 /grok:model none
 ```
 
-> **Grok model note (v1.0.9, 2026-07):** As of 2026-07-08 the Grok Build CLI's default model is **`grok-4.5`**. This plugin no longer pins an older model — when no workspace model is saved it passes no `-m` and follows the CLI default, so future xAI default changes are picked up automatically. Use `/grok:model <id>` to pin one (e.g. `grok-4.5`, `composer`) or `/grok:model none` to clear it and return to the CLI default. **`grok-build` was removed upstream** and is no longer selectable (`-m grok-build` errors `unknown model id`). Flags and the `--output-format json` contract are unchanged.
+> **Grok model note (v1.0.10, 2026-09):** [Grok 4.6](https://docs.x.ai/developers/grok-4-6) is the current Grok Build default. This plugin does not pin a model when no workspace override is saved, so it automatically follows future CLI default changes. Use `/grok:model grok-4.6` or `/grok:model grok-4.5` to pin one, and `/grok:model none` to return to the CLI default. Composer 2.5 is no longer returned by Grok Build CLI 1.0.13 and has been removed from the selectable catalog.
 
 Runs instantly (no Claude orchestration). `/grok:delegate` and `/grok:review` use the saved model unless you pass `--model`.
 
@@ -234,7 +235,7 @@ By default the delegate runs in the **foreground** and returns Grok's answer dir
 /grok:delegate investigate why the build is failing in CI
 /grok:delegate fix the failing test with the smallest safe patch
 /grok:delegate --resume apply the top fix from the last run
-/grok:delegate --model grok-composer-2.5-fast --effort high investigate the flaky test
+/grok:delegate --model grok-4.6 --effort high investigate the flaky test
 /grok:delegate grok max 모드로 flaky test 분석해줘
 /grok:delegate use maximum effort to fix the regression
 /grok:delegate --background investigate the regression
@@ -256,8 +257,8 @@ Ask Grok to redesign the database connection to be more resilient.
 | `--wait` | **Default.** Run in the foreground and return Grok's answer in-band (no `/grok:status`/`/grok:result` needed). Best for normal tasks; bounded by a ~10-minute limit — use `--background` for longer runs. |
 | `--resume` | Continue the latest Grok session for this repo |
 | `--fresh` | Start a new Grok session |
-| `--model <id>` | Pick a model (e.g. `grok-composer-2.5-fast`) |
-| `--effort <level>` | `low`, `medium`, `high`, `xhigh`, or `max` (or natural language like "grok max 모드"). Per-run override. |
+| `--model <id>` | Pick a model (e.g. `grok-4.6` or `grok-4.5`) |
+| `--effort <level>` | `low`, `medium`, `high`, or `xhigh`. Natural language like "grok max 모드" maps to `xhigh`. Per-run override. |
 | workspace effort default | `/grok:effort high` (or none to clear). Applied automatically to `/grok:delegate` and `/grok:review`. |
 | `--no-web` / `--disable-web-search` | Force-disable web search for this run |
 | `--web` / `--enable-web-search` | Enable web search for this run (overrides workspace default) |
@@ -265,7 +266,7 @@ Ask Grok to redesign the database connection to be more resilient.
 
 Delegate runs are **write-capable by default** (Grok can edit files). Ask explicitly for read-only behavior if you only want investigation or review.
 
-**Natural language effort**: You can also say things like "grok max 모드로", "use maximum effort", or "highest reasoning" — the delegate will detect it and pass `--effort max` (or the appropriate level) to Grok. Explicit `--effort` takes precedence.
+**Natural language effort**: You can also say things like "grok max 모드로", "use maximum effort", or "highest reasoning" — the delegate detects it and passes `--effort xhigh`, the maximum supported Grok 4.6 level. Explicit `--effort` takes precedence. Grok 4.6 defaults to `high` when no effort is specified.
 
 ### `/grok:review`
 
@@ -302,11 +303,11 @@ Runs instantly. Default is **off** (web search disabled). `/grok:delegate` and `
 ```text
 /grok:effort
 /grok:effort high
-/grok:effort max
+/grok:effort xhigh
 /grok:effort none
 ```
 
-Runs instantly. Sets the default reasoning effort (`low` / `medium` / `high` / `xhigh` / `max`) for `/grok:delegate` and `/grok:review` in this workspace. Use `none` or `clear` to remove the default (let Grok decide per call). Per-run override with `--effort` flag or natural language like "grok max 모드로".
+Runs instantly. Sets the default reasoning effort (`low` / `medium` / `high` / `xhigh`) for `/grok:delegate` and `/grok:review` in this workspace. Use `none` or `clear` to remove the default (let Grok decide per call). Per-run override with `--effort`; maximum-effort phrases such as "grok max 모드로" map to `xhigh`.
 
 ### Advanced Grok Features
 
@@ -416,7 +417,7 @@ Advanced Grok features (image/video generation, vision, file handling, etc.) are
 Web search is off by default, which avoids `400 Bad Request` on large briefs (~20k tokens):
 
 ```text
-/grok:model composer
+/grok:model grok-4.6
 /grok:delegate <paste or reference your large brief>
 ```
 
@@ -426,7 +427,7 @@ Use `--web` only when you explicitly want Grok to search the web.
 
 ```text
 /grok:model
-/grok:model grok-4.5
+/grok:model grok-4.6
 /grok:web
 /grok:web on
 ```
@@ -447,7 +448,7 @@ Claude Code
        ├─ (default) grok:grok-delegate subagent
        │    └─ grok-companion.mjs task
        └─ (--no-subagents) grok-companion.mjs task directly
-            └─ ~/.grok/bin/grok.exe --prompt-file <utf-8> [--disable-web-search] --output-format json
+            └─ ~/.grok/bin/grok.exe --no-auto-update --prompt-file <utf-8> [--disable-web-search] --output-format json
 ```
 
 The plugin:
@@ -458,6 +459,7 @@ The plugin:
 - tracks jobs per workspace for background status/result/cancel
 - saves per-workspace default model via `/grok:model`
 - saves per-workspace web-search default via `/grok:web` (off by default; pass `--web` per run to enable)
+- suppresses CLI self-update checks during headless tasks, as recommended by the [Grok Build scripting guide](https://docs.x.ai/build/cli/headless-scripting)
 
 ---
 
@@ -477,7 +479,7 @@ Update the plugin:
 /reload-plugins
 ```
 
-Requires **v1.0.7** for `/grok:effort` and advanced Grok features (image/video gen/edit, vision, file handling, etc.) via natural language in `/grok:delegate`. Requires **v1.0.6** for `/grok:web`, `--no-subagents`, etc. `/grok:setup` can also run login on older cached installs.
+Requires **v1.0.10** for the Grok 4.6 model catalog and current effort levels. Requires **v1.0.7** for `/grok:effort` and advanced Grok features (image/video gen/edit, vision, file handling, etc.) via natural language in `/grok:delegate`. Requires **v1.0.6** for `/grok:web`, `--no-subagents`, etc. `/grok:setup` can also run login on older cached installs.
 
 ### `/grok:setup` says needs authentication
 

@@ -1,6 +1,6 @@
 ---
 description: Delegate investigation, an explicit fix request, or follow-up work to the Grok delegate subagent
-argument-hint: "[--no-subagents] [--background|--wait] [--resume|--fresh] [--no-web|--web] [--model <model>] [--effort <low|medium|high|xhigh|max>] [what Grok should investigate, solve, or continue]"
+argument-hint: "[--no-subagents] [--background|--wait] [--resume|--fresh] [--no-web|--web] [--model <model>] [--effort <low|medium|high|xhigh>] [what Grok should investigate, solve, or continue]"
 allowed-tools: Bash(node:*), AskUserQuestion, Agent
 ---
 
@@ -22,11 +22,11 @@ Subagent path (default):
 - `--wait` and `--background` are execution-mode flags — strip them from the natural-language task text. `--wait` is the default and is not passed to `task`; `--background` is passed through to `task`.
 - `--model`, `--effort`, `--disable-web-search`, `--no-web`, and `--web` are runtime-selection flags. Preserve them for the forwarded `task` call, but do not treat them as part of the natural-language task text. Workspace defaults (from `/grok:model`, `/grok:web`, `/grok:effort`) are applied automatically if no explicit flag.
 - Effort can also be requested in natural language. Scan the raw request for phrases indicating desired effort level and ensure the corresponding flag is present:
-  - "grok max", "max mode", "max effort", "grok max 모드", "맥스", "최대 effort", "highest", "maximum" → `--effort max`
+  - "grok max", "max mode", "max effort", "grok max 모드", "맥스", "최대 effort", "highest", "maximum" → `--effort xhigh`
   - "xhigh", "extra high", "매우 높음" → `--effort xhigh`
   - "high effort", "높은 effort" → `--effort high`
   - Similar for medium/low.
-  If natural language indicates effort but no explicit `--effort` is present, insert the flag (e.g. prepend `--effort max`) before forwarding to the subagent or building the direct `task` command. Prefer any explicit `--effort` over inferred.
+  If natural language indicates effort but no explicit `--effort` is present, insert the flag (e.g. prepend `--effort xhigh`) before forwarding to the subagent or building the direct `task` command. Prefer any explicit `--effort` over inferred.
 - Advanced Grok features: Dedicated commands exist for convenience (`/grok:image`, `/grok:edit-image`, `/grok:video`, `/grok:edit-video`, `/grok:vision`, `/grok:tts`, `/grok:stt`). 
   You can still use natural language in this command. Detect common patterns and forward accurately:
   - Image: "generate image", "grok generate image", "create image of", "grok image"

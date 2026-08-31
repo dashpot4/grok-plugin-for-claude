@@ -83,13 +83,13 @@ function printUsage() {
       "Usage:",
       "  node scripts/grok-companion.mjs setup [--json]",
       "  node scripts/grok-companion.mjs review [--wait|--background] [--disable-web-search|--no-web|--web] [--base <ref>] [--scope <auto|working-tree|branch>]",
-      "  node scripts/grok-companion.mjs task [--background] [--write] [--disable-web-search|--no-web|--web] [--resume-last|--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh|max>] [prompt]",
+      "  node scripts/grok-companion.mjs task [--background] [--write] [--disable-web-search|--no-web|--web] [--resume-last|--resume|--fresh] [--model <model>] [--effort <low|medium|high|xhigh>] [prompt]",
       "  node scripts/grok-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/grok-companion.mjs result [job-id] [--json]",
       "  node scripts/grok-companion.mjs cancel [job-id] [--json]",
       "  node scripts/grok-companion.mjs model [--set <model>] [--json]",
       "  node scripts/grok-companion.mjs web [--set on|off] [--json]",
-      "  node scripts/grok-companion.mjs effort [--set <low|medium|high|xhigh|max|none>] [--json]",
+      "  node scripts/grok-companion.mjs effort [--set <low|medium|high|xhigh|none>] [--json]",
       "  node scripts/grok-companion.mjs task-resume-candidate [--json]"
     ].join("\n")
   );

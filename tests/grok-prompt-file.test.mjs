@@ -24,6 +24,7 @@ test("buildGrokArgs uses --prompt-file and never -p", () => {
   assert.equal(args[args.indexOf("--prompt-file") + 1], promptFile);
   assert.equal(args.indexOf("-p"), -1);
   assert.equal(args.indexOf("--single"), -1);
+  assert.ok(args.includes("--no-auto-update"));
 });
 
 test("preparePromptFile writes UTF-8 prompt with parentheses and Korean", () => {

@@ -25,7 +25,7 @@ Forwarding rules:
 - Do not call `review`, `status`, `result`, or `cancel`. This subagent only forwards to `task`.
 - Workspace effort default (from `/grok:effort`) is applied automatically if no per-request effort is specified.
 - Detect effort requests from the user's request text (both explicit `--effort` flags and natural language) to override default. Common mappings:
-  - "max", "maximum", "grok max", "max mode", "max effort", "맥스", "grok max 모드", "최대", "highest", "maximum effort" → include `--effort max`
+  - "max", "maximum", "grok max", "max mode", "max effort", "맥스", "grok max 모드", "최대", "highest", "maximum effort" → include `--effort xhigh`
   - "xhigh", "extra high", "x-high", "매우 높음" → `--effort xhigh`
   - "high", "높음", "high effort" → `--effort high`
   - "medium", "중간", "보통" → `--effort medium`
